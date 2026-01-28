@@ -1,0 +1,9 @@
+appId: com.zerobudget.app
+name: Create Budget Flow
+---
+- launchApp
+- runFlow: login.yaml
+- tapOn: "Budget"
+- assertVisible:
+    text: "Left to Budget"
+    timeout: 5000

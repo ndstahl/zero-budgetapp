@@ -1,0 +1,15 @@
+appId: com.zerobudget.app
+name: Navigation Smoke Test
+---
+- launchApp
+- runFlow: login.yaml
+- tapOn: "Dashboard"
+- assertVisible: "Dashboard"
+- tapOn: "Budget"
+- assertVisible: "Budget"
+- tapOn: "Transactions"
+- assertVisible: "Transactions"
+- tapOn: "Reports"
+- assertVisible: "Reports"
+- tapOn: "More"
+- assertVisible: "More"

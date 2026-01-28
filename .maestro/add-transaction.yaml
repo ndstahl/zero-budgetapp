@@ -1,0 +1,18 @@
+appId: com.zerobudget.app
+name: Add Transaction Flow
+---
+- launchApp
+- runFlow: login.yaml
+- tapOn: "Transactions"
+- assertVisible: "Transactions"
+- tapOn:
+    id: "fab-add-transaction"
+- assertVisible: "Add Transaction"
+- tapOn: "Amount"
+- inputText: "45.99"
+- tapOn: "Description"
+- inputText: "Grocery shopping"
+- tapOn: "Save"
+- assertVisible:
+    text: "Grocery shopping"
+    timeout: 5000

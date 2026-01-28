@@ -1,0 +1,17 @@
+appId: com.zerobudget.app
+name: Login Flow
+---
+- launchApp
+- assertVisible: "Get Started"
+- tapOn: "I already have an account"
+- assertVisible: "Welcome back"
+- tapOn: "Email"
+- inputText: "${MAESTRO_TEST_EMAIL}"
+- tapOn: "Password"
+- inputText: "${MAESTRO_TEST_PASSWORD}"
+- tapOn:
+    text: "Sign In"
+    index: 0
+- assertVisible:
+    text: "Dashboard"
+    timeout: 10000
