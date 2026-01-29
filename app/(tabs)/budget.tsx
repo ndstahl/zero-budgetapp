@@ -19,6 +19,7 @@ export default function BudgetScreen() {
     isCopying,
     updateLineItem,
     addLineItem,
+    updateIncome,
   } = useBudget();
 
   const [addingToGroup, setAddingToGroup] = useState<string | null>(null);
@@ -75,10 +76,65 @@ export default function BudgetScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
-      <BudgetHeader summary={budget.summary} />
+      <BudgetHeader
+        summary={budget.summary}
+        plannedIncome={budget.planned_income}
+        onUpdatePlannedIncome={updateIncome}
+      />
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        {/* Category Groups */}
+        {/* Income Section */}
+        {budget.category_groups.filter((g) => g.is_income).length > 0 && (
+          <View className="mb-2">
+            <View className="bg-white dark:bg-gray-800 px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+              <Text className="text-sm font-semibold uppercase tracking-wide text-success-600 dark:text-success-400">
+                Income
+              </Text>
+            </View>
+            {budget.category_groups
+              .filter((g) => g.is_income)
+              .map((group) => (
+                <View key={group.id}>
+                  <CategoryGroup
+                    group={group}
+                    onPressLineItem={handlePressLineItem}
+                    onUpdatePlanned={handleUpdatePlanned}
+                    onAddLineItem={handleAddLineItem}
+                  />
+                  {addingToGroup === group.id && (
+                    <View className="flex-row items-center bg-white dark:bg-gray-800 px-4 py-2">
+                      <TextInput
+                        className="flex-1 rounded-lg border border-brand-300 dark:border-brand-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white"
+                        placeholder="Item name..."
+                        placeholderTextColor="#9CA3AF"
+                        value={newItemName}
+                        onChangeText={setNewItemName}
+                        autoFocus
+                        onSubmitEditing={() => handleAddLineItem(group.id)}
+                        returnKeyType="done"
+                      />
+                      <View className="ml-2">
+                        <Button
+                          title="Add"
+                          onPress={() => handleAddLineItem(group.id)}
+                          size="sm"
+                        />
+                      </View>
+                    </View>
+                  )}
+                </View>
+              ))}
+          </View>
+        )}
+
+        {/* Expense Section Header */}
+        <View className="bg-white dark:bg-gray-800 px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+          <Text className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+            Expenses
+          </Text>
+        </View>
+
+        {/* Expense Category Groups */}
         {budget.category_groups
           .filter((g) => !g.is_income)
           .map((group) => (

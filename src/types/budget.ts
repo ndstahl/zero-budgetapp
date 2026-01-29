@@ -44,7 +44,8 @@ export interface LineItem {
 }
 
 export interface BudgetSummary {
-  total_income: number;
+  total_income: number; // planned income
+  actual_income: number; // income from transactions
   total_planned: number;
   total_spent: number;
   left_to_budget: number; // income - totalPlanned (should be 0)

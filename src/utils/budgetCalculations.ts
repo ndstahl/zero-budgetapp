@@ -9,6 +9,7 @@ import type {
  */
 export function calculateBudgetSummary(
   plannedIncome: number,
+  actualIncome: number,
   groups: CategoryGroupWithItems[]
 ): BudgetSummary {
   let totalPlanned = 0;
@@ -28,6 +29,7 @@ export function calculateBudgetSummary(
 
   return {
     total_income: plannedIncome,
+    actual_income: actualIncome,
     total_planned: totalPlanned,
     total_spent: totalSpent,
     left_to_budget: leftToBudget,

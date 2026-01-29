@@ -1,54 +1,72 @@
-import { View, Text, ScrollView, Pressable, KeyboardAvoidingView, Platform, Alert, StyleSheet, TextInput } from 'react-native';
+import { View, Text, ScrollView, Pressable, KeyboardAvoidingView, Platform, Alert, StyleSheet, TextInput, Modal } from 'react-native';
 import { router } from 'expo-router';
 import { useState, useEffect } from 'react';
+import { Calendar } from 'react-native-calendars';
 import { useTransactions } from '../../src/hooks/useTransactions';
 import { useBudget } from '../../src/hooks/useBudget';
 import type { TransactionType } from '../../src/types/transaction';
+import { Calendar as CalendarIcon } from 'lucide-react-native';
 
 export default function AddTransactionScreen() {
   const [amount, setAmount] = useState('');
   const [merchantName, setMerchantName] = useState('');
   const [description, setDescription] = useState('');
   const [type, setType] = useState<TransactionType>('expense');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(new Date());
   const [selectedLineItemId, setSelectedLineItemId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
-  const { createTransaction } = useTransactions();
+  const { createTransaction, isCreating } = useTransactions();
   const { budget } = useBudget();
 
-  const handleSave = async () => {
+  const handleSave = () => {
     const amountCents = Math.round(parseFloat(amount || '0') * 100);
     if (amountCents === 0) {
       Alert.alert('Amount required', 'Enter a transaction amount');
       return;
     }
 
-    setLoading(true);
-    try {
-      createTransaction(
-        {
-          amount: amountCents,
-          merchant_name: merchantName || undefined,
-          description: description || undefined,
-          date,
-          type,
-          line_item_id: selectedLineItemId ?? undefined,
-          budget_id: budget?.id,
+    const dateString = date.toISOString().split('T')[0];
+
+    createTransaction(
+      {
+        amount: amountCents,
+        merchant_name: merchantName || undefined,
+        description: description || undefined,
+        date: dateString,
+        type,
+        line_item_id: selectedLineItemId ?? undefined,
+        budget_id: budget?.id,
+      },
+      {
+        onSuccess: () => {
+          Alert.alert('Success', 'Transaction added', [
+            { text: 'OK', onPress: () => router.back() }
+          ]);
         },
-        {
-          onSuccess: () => {
-            Alert.alert('Success', 'Transaction added');
-            router.back();
-          },
-          onError: (err: any) => {
-            Alert.alert('Error', err.message);
-          },
-        }
-      );
-    } finally {
-      setLoading(false);
-    }
+        onError: (err: Error) => {
+          Alert.alert('Error', err.message);
+        },
+      }
+    );
+  };
+
+  const handleDateSelect = (day: { dateString: string }) => {
+    setDate(new Date(day.dateString + 'T12:00:00'));
+    setShowDatePicker(false);
+  };
+
+  const formatDisplayDate = (d: Date) => {
+    return d.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
+
+  const getDateString = (d: Date) => {
+    return d.toISOString().split('T')[0];
   };
 
   // Reset selected line item when switching transaction type
@@ -136,17 +154,65 @@ export default function AddTransactionScreen() {
           />
         </View>
 
-        {/* Date */}
+        {/* Date Picker */}
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Date</Text>
-          <TextInput
-            style={styles.textInput}
-            value={date}
-            onChangeText={setDate}
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor="#9CA3AF"
-          />
+          <Pressable
+            onPress={() => setShowDatePicker(true)}
+            style={styles.dateButton}
+          >
+            <CalendarIcon color="#6B7280" size={20} />
+            <Text style={styles.dateText}>{formatDisplayDate(date)}</Text>
+          </Pressable>
         </View>
+
+        {/* Calendar Modal */}
+        <Modal
+          visible={showDatePicker}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowDatePicker(false)}
+        >
+          <Pressable
+            style={styles.modalOverlay}
+            onPress={() => setShowDatePicker(false)}
+          >
+            <Pressable style={styles.calendarContainer}>
+              <View style={styles.calendarHeader}>
+                <Text style={styles.calendarTitle}>Select Date</Text>
+                <Pressable onPress={() => setShowDatePicker(false)}>
+                  <Text style={styles.calendarDoneText}>Done</Text>
+                </Pressable>
+              </View>
+              <Calendar
+                current={getDateString(date)}
+                onDayPress={handleDateSelect}
+                markedDates={{
+                  [getDateString(date)]: {
+                    selected: true,
+                    selectedColor: '#4F46E5',
+                  },
+                }}
+                theme={{
+                  backgroundColor: '#FFFFFF',
+                  calendarBackground: '#FFFFFF',
+                  textSectionTitleColor: '#6B7280',
+                  selectedDayBackgroundColor: '#4F46E5',
+                  selectedDayTextColor: '#FFFFFF',
+                  todayTextColor: '#4F46E5',
+                  dayTextColor: '#111827',
+                  textDisabledColor: '#D1D5DB',
+                  arrowColor: '#4F46E5',
+                  monthTextColor: '#111827',
+                  textMonthFontWeight: '600',
+                  textDayFontSize: 16,
+                  textMonthFontSize: 17,
+                  textDayHeaderFontSize: 13,
+                }}
+              />
+            </Pressable>
+          </Pressable>
+        </Modal>
 
         {/* Category Picker */}
         {lineItems.length > 0 && (
@@ -186,11 +252,11 @@ export default function AddTransactionScreen() {
         {/* Save Button */}
         <Pressable
           onPress={handleSave}
-          disabled={loading}
-          style={[styles.saveButton, loading && styles.saveButtonDisabled]}
+          disabled={isCreating}
+          style={[styles.saveButton, isCreating && styles.saveButtonDisabled]}
         >
           <Text style={styles.saveButtonText}>
-            {loading ? 'Saving...' : 'Save Transaction'}
+            {isCreating ? 'Saving...' : 'Save Transaction'}
           </Text>
         </Pressable>
       </ScrollView>
@@ -276,6 +342,59 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 16,
     color: '#111827',
+  },
+  dateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  dateText: {
+    fontSize: 16,
+    color: '#111827',
+    marginLeft: 10,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  calendarContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    overflow: 'hidden',
+    width: '100%',
+    maxWidth: 360,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  calendarHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  calendarTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  calendarDoneText: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#4F46E5',
   },
   categoryList: {
     backgroundColor: '#FFFFFF',

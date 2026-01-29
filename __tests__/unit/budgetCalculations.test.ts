@@ -7,8 +7,9 @@ import {
 
 describe('calculateBudgetSummary', () => {
   it('returns zero summary for empty groups', () => {
-    const result = calculateBudgetSummary(500000, []);
+    const result = calculateBudgetSummary(500000, 0, []);
     expect(result.total_income).toBe(500000);
+    expect(result.actual_income).toBe(0);
     expect(result.total_planned).toBe(0);
     expect(result.total_spent).toBe(0);
     expect(result.left_to_budget).toBe(500000);
@@ -71,10 +72,11 @@ describe('calculateBudgetSummary', () => {
         ],
       },
     ];
-    const result = calculateBudgetSummary(500000, groups as any);
+    const result = calculateBudgetSummary(500000, 450000, groups as any);
     expect(result.total_planned).toBe(150000);
     expect(result.total_spent).toBe(150000);
     expect(result.left_to_budget).toBe(350000);
+    expect(result.actual_income).toBe(450000);
   });
 
   it('caps percent_spent at 1', () => {
@@ -106,7 +108,7 @@ describe('calculateBudgetSummary', () => {
         ],
       },
     ];
-    const result = calculateBudgetSummary(50000, groups as any);
+    const result = calculateBudgetSummary(50000, 50000, groups as any);
     expect(result.percent_spent).toBe(1);
   });
 });

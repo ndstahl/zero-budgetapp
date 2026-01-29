@@ -38,17 +38,25 @@ export const budgetService = {
     // Get all transactions for this budget
     const { data: transactions, error: txError } = await supabase
       .from('transactions')
-      .select('line_item_id, amount, is_split, parent_transaction_id')
+      .select('line_item_id, amount, is_split, parent_transaction_id, type')
       .eq('budget_id', budget.id)
       .eq('is_excluded', false);
 
     if (txError) throw txError;
 
-    // Build spent amounts per line item
+    // Build spent amounts per line item and calculate actual income
     const spentByLineItem = new Map<string, number>();
+    let actualIncome = 0;
+
     for (const tx of transactions ?? []) {
       // Skip parent split transactions (children carry the amounts)
       if (tx.is_split && !tx.parent_transaction_id) continue;
+
+      // Sum up income transactions
+      if (tx.type === 'income') {
+        actualIncome += Math.abs(tx.amount);
+      }
+
       if (!tx.line_item_id) continue;
       const current = spentByLineItem.get(tx.line_item_id) ?? 0;
       spentByLineItem.set(tx.line_item_id, current + Math.abs(tx.amount));
@@ -73,7 +81,7 @@ export const budgetService = {
       };
     });
 
-    const summary = calculateBudgetSummary(budget.planned_income, categoryGroups);
+    const summary = calculateBudgetSummary(budget.planned_income, actualIncome, categoryGroups);
 
     return {
       ...budget,

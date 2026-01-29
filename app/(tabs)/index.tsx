@@ -53,6 +53,26 @@ export default function DashboardScreen() {
               <Text className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                 Budget Overview
               </Text>
+
+              {/* Income Row */}
+              <View className="mb-3 flex-row justify-between items-center">
+                <View>
+                  <Text className="text-xs text-gray-400 dark:text-gray-500">Income Received</Text>
+                  <Text className="text-xl font-bold text-success-500">
+                    {formatCurrency(summary.actual_income)}
+                  </Text>
+                </View>
+                <View className="items-end">
+                  <Text className="text-xs text-gray-400 dark:text-gray-500">
+                    of {formatCurrency(summary.total_income)} planned
+                  </Text>
+                </View>
+              </View>
+
+              {/* Divider */}
+              <View className="h-px bg-gray-100 dark:bg-gray-700 mb-3" />
+
+              {/* Spending Row */}
               <View className="mb-3 flex-row justify-between">
                 <View>
                   <Text className="text-xs text-gray-400 dark:text-gray-500">Spent</Text>
@@ -62,7 +82,7 @@ export default function DashboardScreen() {
                 </View>
                 <View className="items-end">
                   <Text className="text-xs text-gray-400 dark:text-gray-500">
-                    of {formatCurrency(summary.total_planned)}
+                    of {formatCurrency(summary.total_planned)} budgeted
                   </Text>
                   <Text className="text-sm font-medium text-gray-500 dark:text-gray-400">
                     {formatPercent(summary.percent_spent)} used
