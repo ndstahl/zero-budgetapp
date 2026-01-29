@@ -53,96 +53,98 @@ export default function SignUpScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView className="flex-1 bg-white dark:bg-gray-900">
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         className="flex-1"
       >
         <ScrollView
           className="flex-1"
-          contentContainerStyle={{ flexGrow: 1 }}
+          contentContainerStyle={{ flexGrow: 1, alignItems: 'center' }}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Header */}
-          <View className="px-6 pt-4">
-            <Pressable onPress={() => router.back()} className="mb-6">
-              <ArrowLeft color="#374151" size={24} />
-            </Pressable>
-            <Text className="mb-2 text-3xl font-bold text-gray-900">
-              Create your account
-            </Text>
-            <Text className="mb-8 text-base text-gray-500">
-              Start giving every dollar a job today.
-            </Text>
-          </View>
+          <View className="w-full max-w-md flex-1">
+            {/* Header */}
+            <View className="px-6 pt-4">
+              <Pressable onPress={() => router.back()} className="mb-6">
+                <ArrowLeft color="#9CA3AF" size={24} />
+              </Pressable>
+              <Text className="mb-2 text-3xl font-bold text-gray-900 dark:text-white">
+                Create your account
+              </Text>
+              <Text className="mb-8 text-base text-gray-500 dark:text-gray-400">
+                Start giving every dollar a job today.
+              </Text>
+            </View>
 
-          {/* Form */}
-          <View className="flex-1 px-6">
-            <View className="mb-4">
-              <Input
-                label="Full Name"
-                placeholder="Jane Doe"
-                value={fullName}
-                onChangeText={setFullName}
-                autoCapitalize="words"
-                error={errors.fullName}
-                leftIcon={<User color="#9CA3AF" size={20} />}
+            {/* Form */}
+            <View className="flex-1 px-6">
+              <View className="mb-4">
+                <Input
+                  label="Full Name"
+                  placeholder="Jane Doe"
+                  value={fullName}
+                  onChangeText={setFullName}
+                  autoCapitalize="words"
+                  error={errors.fullName}
+                  leftIcon={<User color="#9CA3AF" size={20} />}
+                />
+              </View>
+
+              <View className="mb-4">
+                <Input
+                  label="Email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  error={errors.email}
+                  leftIcon={<Mail color="#9CA3AF" size={20} />}
+                />
+              </View>
+
+              <View className="mb-4">
+                <Input
+                  label="Password"
+                  placeholder="Min. 8 characters"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                  error={errors.password}
+                  leftIcon={<Lock color="#9CA3AF" size={20} />}
+                />
+              </View>
+
+              <View className="mb-6">
+                <Input
+                  label="Confirm Password"
+                  placeholder="Re-enter password"
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  secureTextEntry
+                  error={errors.confirmPassword}
+                  leftIcon={<Lock color="#9CA3AF" size={20} />}
+                />
+              </View>
+
+              <Button
+                title="Create Account"
+                onPress={handleSignUp}
+                loading={loading}
+                size="lg"
+                fullWidth
               />
             </View>
 
-            <View className="mb-4">
-              <Input
-                label="Email"
-                placeholder="you@example.com"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                error={errors.email}
-                leftIcon={<Mail color="#9CA3AF" size={20} />}
-              />
+            {/* Footer */}
+            <View className="flex-row items-center justify-center px-6 pb-8 pt-4">
+              <Text className="text-base text-gray-500 dark:text-gray-400">Already have an account? </Text>
+              <Pressable onPress={() => router.replace('/(auth)/sign-in')}>
+                <Text className="text-base font-semibold text-brand-500">Sign In</Text>
+              </Pressable>
             </View>
-
-            <View className="mb-4">
-              <Input
-                label="Password"
-                placeholder="Min. 8 characters"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                error={errors.password}
-                leftIcon={<Lock color="#9CA3AF" size={20} />}
-              />
-            </View>
-
-            <View className="mb-6">
-              <Input
-                label="Confirm Password"
-                placeholder="Re-enter password"
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                secureTextEntry
-                error={errors.confirmPassword}
-                leftIcon={<Lock color="#9CA3AF" size={20} />}
-              />
-            </View>
-
-            <Button
-              title="Create Account"
-              onPress={handleSignUp}
-              loading={loading}
-              size="lg"
-              fullWidth
-            />
-          </View>
-
-          {/* Footer */}
-          <View className="flex-row items-center justify-center px-6 pb-8 pt-4">
-            <Text className="text-base text-gray-500">Already have an account? </Text>
-            <Pressable onPress={() => router.replace('/(auth)/sign-in')}>
-              <Text className="text-base font-semibold text-brand-500">Sign In</Text>
-            </Pressable>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

@@ -6,6 +6,7 @@ export default function StacksLayout() {
   const resolvedTheme = useResolvedTheme();
   const isDark = resolvedTheme === 'dark';
 
+  // Note: Auth is handled by tabs layout - stacks are only accessible from tabs
   return (
     <Stack
       screenOptions={{

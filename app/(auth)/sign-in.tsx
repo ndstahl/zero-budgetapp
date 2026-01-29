@@ -48,74 +48,76 @@ export default function SignInScreen() {
       >
         <ScrollView
           className="flex-1"
-          contentContainerStyle={{ flexGrow: 1 }}
+          contentContainerStyle={{ flexGrow: 1, alignItems: 'center' }}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Header */}
-          <View className="px-6 pt-4">
-            <Pressable onPress={() => router.back()} className="mb-6">
-              <ArrowLeft color="#9CA3AF" size={24} />
-            </Pressable>
-            <Text className="mb-2 text-3xl font-bold text-gray-900 dark:text-white">
-              Welcome back
-            </Text>
-            <Text className="mb-8 text-base text-gray-500 dark:text-gray-400">
-              Sign in to your account to continue budgeting.
-            </Text>
-          </View>
-
-          {/* Form */}
-          <View className="flex-1 px-6">
-            <View className="mb-4">
-              <Input
-                label="Email"
-                placeholder="you@example.com"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                error={errors.email}
-                leftIcon={<Mail color="#9CA3AF" size={20} />}
-              />
-            </View>
-
-            <View className="mb-6">
-              <Input
-                label="Password"
-                placeholder="Enter your password"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                error={errors.password}
-                leftIcon={<Lock color="#9CA3AF" size={20} />}
-              />
-            </View>
-
-            <Button
-              title="Sign In"
-              onPress={handleSignIn}
-              loading={loading}
-              size="lg"
-              fullWidth
-            />
-
-            <Pressable
-              onPress={() => router.push('/(auth)/forgot-password')}
-              className="mt-4 self-center"
-            >
-              <Text className="text-base text-brand-500 font-medium">
-                Forgot your password?
+          <View className="w-full max-w-md flex-1">
+            {/* Header */}
+            <View className="px-6 pt-4">
+              <Pressable onPress={() => router.back()} className="mb-6">
+                <ArrowLeft color="#9CA3AF" size={24} />
+              </Pressable>
+              <Text className="mb-2 text-3xl font-bold text-gray-900 dark:text-white">
+                Welcome back
               </Text>
-            </Pressable>
-          </View>
+              <Text className="mb-8 text-base text-gray-500 dark:text-gray-400">
+                Sign in to your account to continue budgeting.
+              </Text>
+            </View>
 
-          {/* Footer */}
-          <View className="flex-row items-center justify-center px-6 pb-8 pt-4">
-            <Text className="text-base text-gray-500 dark:text-gray-400">Don't have an account? </Text>
-            <Pressable onPress={() => router.replace('/(auth)/sign-up')}>
-              <Text className="text-base font-semibold text-brand-500">Sign Up</Text>
-            </Pressable>
+            {/* Form */}
+            <View className="flex-1 px-6">
+              <View className="mb-4">
+                <Input
+                  label="Email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  error={errors.email}
+                  leftIcon={<Mail color="#9CA3AF" size={20} />}
+                />
+              </View>
+
+              <View className="mb-6">
+                <Input
+                  label="Password"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                  error={errors.password}
+                  leftIcon={<Lock color="#9CA3AF" size={20} />}
+                />
+              </View>
+
+              <Button
+                title="Sign In"
+                onPress={handleSignIn}
+                loading={loading}
+                size="lg"
+                fullWidth
+              />
+
+              <Pressable
+                onPress={() => router.push('/(auth)/forgot-password')}
+                className="mt-4 self-center"
+              >
+                <Text className="text-base text-brand-500 font-medium">
+                  Forgot your password?
+                </Text>
+              </Pressable>
+            </View>
+
+            {/* Footer */}
+            <View className="flex-row items-center justify-center px-6 pb-8 pt-4">
+              <Text className="text-base text-gray-500 dark:text-gray-400">Don't have an account? </Text>
+              <Pressable onPress={() => router.replace('/(auth)/sign-up')}>
+                <Text className="text-base font-semibold text-brand-500">Sign Up</Text>
+              </Pressable>
+            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

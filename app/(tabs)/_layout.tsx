@@ -7,6 +7,8 @@ export default function TabLayout() {
   const resolvedTheme = useResolvedTheme();
   const isDark = resolvedTheme === 'dark';
 
+  // Always render Tabs to maintain navigation context
+  // Auth redirects are handled by the index screen
   return (
     <Tabs
       screenOptions={{

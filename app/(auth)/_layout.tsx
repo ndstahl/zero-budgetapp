@@ -1,11 +1,28 @@
-import { Stack } from 'expo-router';
+import { Stack, Redirect } from 'expo-router';
+import { useAuth } from '../../src/hooks/useAuth';
+import { LoadingScreen } from '../../src/components/shared/LoadingScreen';
+import { useResolvedTheme } from '../../src/components/ThemeProvider';
+import { Colors } from '../../src/constants/colors';
 
 export default function AuthLayout() {
+  const { isLoading, isAuthenticated } = useAuth();
+  const resolvedTheme = useResolvedTheme();
+  const isDark = resolvedTheme === 'dark';
+
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
+
+  // Redirect authenticated users to main app
+  if (isAuthenticated) {
+    return <Redirect href="/(tabs)" />;
+  }
+
   return (
     <Stack
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: '#FFFFFF' },
+        contentStyle: { backgroundColor: isDark ? Colors.gray[900] : Colors.white },
       }}
     >
       <Stack.Screen name="welcome" />

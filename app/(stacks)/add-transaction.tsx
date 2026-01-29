@@ -1,17 +1,12 @@
-import { View, Text, ScrollView, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, ScrollView, Pressable, KeyboardAvoidingView, Platform, Alert, StyleSheet, TextInput } from 'react-native';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTransactions } from '../../src/hooks/useTransactions';
 import { useBudget } from '../../src/hooks/useBudget';
-import { Button } from '../../src/components/ui/Button';
-import { Input } from '../../src/components/ui/Input';
-import { CurrencyInput } from '../../src/components/shared/CurrencyInput';
-import { Card } from '../../src/components/ui/Card';
-import Toast from 'react-native-toast-message';
 import type { TransactionType } from '../../src/types/transaction';
 
 export default function AddTransactionScreen() {
-  const [amount, setAmount] = useState(0);
+  const [amount, setAmount] = useState('');
   const [merchantName, setMerchantName] = useState('');
   const [description, setDescription] = useState('');
   const [type, setType] = useState<TransactionType>('expense');
@@ -23,8 +18,9 @@ export default function AddTransactionScreen() {
   const { budget } = useBudget();
 
   const handleSave = async () => {
-    if (amount === 0) {
-      Toast.show({ type: 'error', text1: 'Amount required', text2: 'Enter a transaction amount' });
+    const amountCents = Math.round(parseFloat(amount || '0') * 100);
+    if (amountCents === 0) {
+      Alert.alert('Amount required', 'Enter a transaction amount');
       return;
     }
 
@@ -32,7 +28,7 @@ export default function AddTransactionScreen() {
     try {
       createTransaction(
         {
-          amount,
+          amount: amountCents,
           merchant_name: merchantName || undefined,
           description: description || undefined,
           date,
@@ -42,11 +38,11 @@ export default function AddTransactionScreen() {
         },
         {
           onSuccess: () => {
-            Toast.show({ type: 'success', text1: 'Transaction added' });
+            Alert.alert('Success', 'Transaction added');
             router.back();
           },
           onError: (err: any) => {
-            Toast.show({ type: 'error', text1: 'Error', text2: err.message });
+            Alert.alert('Error', err.message);
           },
         }
       );
@@ -55,11 +51,16 @@ export default function AddTransactionScreen() {
     }
   };
 
-  // Get expense line items for category picker
+  // Reset selected line item when switching transaction type
+  useEffect(() => {
+    setSelectedLineItemId(null);
+  }, [type]);
+
+  // Get line items for category picker based on transaction type
   const lineItems = budget?.category_groups
-    .filter((g) => !g.is_income)
-    .flatMap((g) =>
-      g.line_items.map((item) => ({
+    ?.filter((g) => (type === 'income' ? g.is_income : !g.is_income))
+    ?.flatMap((g) =>
+      (g.line_items || []).map((item) => ({
         ...item,
         groupName: g.name,
       }))
@@ -68,78 +69,92 @@ export default function AddTransactionScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      className="flex-1 bg-white"
+      style={styles.container}
     >
       <ScrollView
-        className="flex-1"
-        contentContainerStyle={{ padding: 16 }}
+        style={styles.scrollView}
+        contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
         {/* Type Selector */}
-        <View className="mb-4 flex-row rounded-xl bg-gray-100 p-1">
-          {(['expense', 'income'] as TransactionType[]).map((t) => (
-            <Pressable
-              key={t}
-              onPress={() => setType(t)}
-              className={`flex-1 items-center rounded-lg py-2.5 ${
-                type === t ? 'bg-white shadow-sm' : ''
-              }`}
-            >
-              <Text
-                className={`text-sm font-semibold ${
-                  type === t ? 'text-gray-900' : 'text-gray-500'
-                }`}
-              >
-                {t === 'expense' ? 'Expense' : 'Income'}
-              </Text>
-            </Pressable>
-          ))}
+        <View style={styles.typeSelector}>
+          <Pressable
+            onPress={() => setType('expense')}
+            style={[styles.typeButton, type === 'expense' && styles.typeButtonActive]}
+          >
+            <Text style={[styles.typeText, type === 'expense' && styles.typeTextActive]}>
+              Expense
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => setType('income')}
+            style={[styles.typeButton, type === 'income' && styles.typeButtonActive]}
+          >
+            <Text style={[styles.typeText, type === 'income' && styles.typeTextActive]}>
+              Income
+            </Text>
+          </Pressable>
         </View>
 
         {/* Amount */}
-        <View className="mb-4">
-          <CurrencyInput
-            value={amount}
-            onChangeValue={setAmount}
-            label="Amount"
-          />
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Amount</Text>
+          <View style={styles.amountContainer}>
+            <Text style={styles.currencySymbol}>$</Text>
+            <TextInput
+              style={styles.amountInput}
+              value={amount}
+              onChangeText={setAmount}
+              keyboardType="decimal-pad"
+              placeholder="0.00"
+              placeholderTextColor="#9CA3AF"
+            />
+          </View>
         </View>
 
         {/* Merchant Name */}
-        <View className="mb-4">
-          <Input
-            label="Merchant / Payee"
-            placeholder="e.g. Walmart, Starbucks"
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Merchant / Payee</Text>
+          <TextInput
+            style={styles.textInput}
             value={merchantName}
             onChangeText={setMerchantName}
+            placeholder="e.g. Walmart, Starbucks"
+            placeholderTextColor="#9CA3AF"
           />
         </View>
 
         {/* Description */}
-        <View className="mb-4">
-          <Input
-            label="Description (optional)"
-            placeholder="What was this for?"
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Description (optional)</Text>
+          <TextInput
+            style={styles.textInput}
             value={description}
             onChangeText={setDescription}
+            placeholder="What was this for?"
+            placeholderTextColor="#9CA3AF"
           />
         </View>
 
         {/* Date */}
-        <View className="mb-4">
-          <Input
-            label="Date"
-            placeholder="YYYY-MM-DD"
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Date</Text>
+          <TextInput
+            style={styles.textInput}
             value={date}
             onChangeText={setDate}
+            placeholder="YYYY-MM-DD"
+            placeholderTextColor="#9CA3AF"
           />
         </View>
 
         {/* Category Picker */}
-        {type === 'expense' && lineItems.length > 0 && (
-          <View className="mb-4">
-            <Text className="mb-2 text-sm font-medium text-gray-700">Category</Text>
-            <Card variant="outlined" padding="none">
+        {lineItems.length > 0 && (
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>
+              {type === 'income' ? 'Income Source' : 'Category'}
+            </Text>
+            <View style={styles.categoryList}>
               {lineItems.map((item) => (
                 <Pressable
                   key={item.id}
@@ -148,37 +163,162 @@ export default function AddTransactionScreen() {
                       selectedLineItemId === item.id ? null : item.id
                     )
                   }
-                  className={`border-b border-gray-50 px-4 py-3 ${
-                    selectedLineItemId === item.id ? 'bg-brand-50' : ''
-                  }`}
+                  style={[
+                    styles.categoryItem,
+                    selectedLineItemId === item.id && styles.categoryItemActive,
+                  ]}
                 >
                   <Text
-                    className={`text-sm ${
-                      selectedLineItemId === item.id
-                        ? 'font-semibold text-brand-600'
-                        : 'text-gray-700'
-                    }`}
+                    style={[
+                      styles.categoryName,
+                      selectedLineItemId === item.id && styles.categoryNameActive,
+                    ]}
                   >
                     {item.name}
                   </Text>
-                  <Text className="text-xs text-gray-400">{item.groupName}</Text>
+                  <Text style={styles.categoryGroup}>{item.groupName}</Text>
                 </Pressable>
               ))}
-            </Card>
+            </View>
           </View>
         )}
 
         {/* Save Button */}
-        <View className="mt-4">
-          <Button
-            title="Save Transaction"
-            onPress={handleSave}
-            loading={loading}
-            size="lg"
-            fullWidth
-          />
-        </View>
+        <Pressable
+          onPress={handleSave}
+          disabled={loading}
+          style={[styles.saveButton, loading && styles.saveButtonDisabled]}
+        >
+          <Text style={styles.saveButtonText}>
+            {loading ? 'Saving...' : 'Save Transaction'}
+          </Text>
+        </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  content: {
+    padding: 16,
+  },
+  typeSelector: {
+    flexDirection: 'row',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 16,
+  },
+  typeButton: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  typeButtonActive: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  typeText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  typeTextActive: {
+    color: '#111827',
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+    marginBottom: 6,
+  },
+  textInput: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#111827',
+  },
+  amountContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+  },
+  currencySymbol: {
+    fontSize: 16,
+    color: '#6B7280',
+    marginRight: 4,
+  },
+  amountInput: {
+    flex: 1,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#111827',
+  },
+  categoryList: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  categoryItem: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F9FAFB',
+  },
+  categoryItemActive: {
+    backgroundColor: '#EEF2FF',
+  },
+  categoryName: {
+    fontSize: 14,
+    color: '#374151',
+  },
+  categoryNameActive: {
+    fontWeight: '600',
+    color: '#4F46E5',
+  },
+  categoryGroup: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    marginTop: 2,
+  },
+  saveButton: {
+    backgroundColor: '#4F46E5',
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  saveButtonDisabled: {
+    opacity: 0.5,
+  },
+  saveButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+});

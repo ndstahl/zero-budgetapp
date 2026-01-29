@@ -28,7 +28,7 @@ const queryClient = new QueryClient({
 });
 
 function RootLayoutNav() {
-  const { isLoading, isAuthenticated } = useAuth();
+  const { isLoading } = useAuth();
   const resolvedTheme = useResolvedTheme();
 
   useEffect(() => {
@@ -37,24 +37,18 @@ function RootLayoutNav() {
     }
   }, [isLoading]);
 
-  if (isLoading) {
-    return <LoadingScreen />;
-  }
-
+  // Always render the Stack navigator to maintain navigation context
+  // Individual screens/layouts handle auth redirects
   return (
     <>
       <Stack screenOptions={{ headerShown: false }}>
-        {isAuthenticated ? (
-          <>
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen
-              name="(stacks)"
-              options={{ presentation: 'modal' }}
-            />
-          </>
-        ) : (
-          <Stack.Screen name="(auth)" />
-        )}
+        <Stack.Screen name="index" />
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen
+          name="(stacks)"
+          options={{ presentation: 'modal' }}
+        />
       </Stack>
       <StatusBar style={resolvedTheme === 'dark' ? 'light' : 'dark'} />
       <Toast />
