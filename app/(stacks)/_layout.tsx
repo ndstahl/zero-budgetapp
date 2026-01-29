@@ -1,12 +1,18 @@
 import { Stack } from 'expo-router';
+import { useResolvedTheme } from '../../src/components/ThemeProvider';
+import { Colors } from '../../src/constants/colors';
 
 export default function StacksLayout() {
+  const resolvedTheme = useResolvedTheme();
+  const isDark = resolvedTheme === 'dark';
+
   return (
     <Stack
       screenOptions={{
         headerShown: true,
         headerShadowVisible: false,
-        headerStyle: { backgroundColor: '#FFFFFF' },
+        headerStyle: { backgroundColor: isDark ? Colors.gray[800] : Colors.white },
+        headerTintColor: isDark ? Colors.white : Colors.gray[900],
         headerTitleStyle: { fontWeight: '600', fontSize: 17 },
         presentation: 'modal',
       }}
@@ -82,6 +88,10 @@ export default function StacksLayout() {
       <Stack.Screen
         name="settings/profile"
         options={{ title: 'Profile' }}
+      />
+      <Stack.Screen
+        name="settings/appearance"
+        options={{ title: 'Appearance' }}
       />
       <Stack.Screen
         name="settings/notifications"

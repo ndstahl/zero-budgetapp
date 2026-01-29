@@ -10,6 +10,7 @@ import { LoadingScreen } from '../src/components/shared/LoadingScreen';
 import * as SplashScreen from 'expo-splash-screen';
 import { initSentry, Sentry } from '../src/lib/sentry';
 import { initAnalytics } from '../src/lib/analytics';
+import { ThemeProvider, useResolvedTheme } from '../src/components/ThemeProvider';
 
 // Initialize error tracking and analytics before anything else
 initSentry();
@@ -28,6 +29,7 @@ const queryClient = new QueryClient({
 
 function RootLayoutNav() {
   const { isLoading, isAuthenticated } = useAuth();
+  const resolvedTheme = useResolvedTheme();
 
   useEffect(() => {
     if (!isLoading) {
@@ -54,7 +56,7 @@ function RootLayoutNav() {
           <Stack.Screen name="(auth)" />
         )}
       </Stack>
-      <StatusBar style="auto" />
+      <StatusBar style={resolvedTheme === 'dark' ? 'light' : 'dark'} />
       <Toast />
     </>
   );
@@ -64,7 +66,9 @@ function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <QueryClientProvider client={queryClient}>
-        <RootLayoutNav />
+        <ThemeProvider>
+          <RootLayoutNav />
+        </ThemeProvider>
       </QueryClientProvider>
     </GestureHandlerRootView>
   );

@@ -28,7 +28,7 @@ export function ProgressBar({
   const widthPercent = `${Math.round(clampedProgress * 100)}%`;
 
   return (
-    <View className={`w-full overflow-hidden rounded-full bg-gray-200 ${heightClasses[height]}`}>
+    <View className={`w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700 ${heightClasses[height]}`}>
       <View
         className={`${heightClasses[height]} rounded-full ${colorClasses[color]}`}
         style={{ width: widthPercent as any }}

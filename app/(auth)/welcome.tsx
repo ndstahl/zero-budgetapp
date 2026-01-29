@@ -75,20 +75,20 @@ export default function WelcomeScreen() {
       <View className="mb-8 h-24 w-24 items-center justify-center rounded-3xl bg-brand-500">
         {item.icon}
       </View>
-      <Text className="mb-2 text-center text-3xl font-bold text-gray-900">
+      <Text className="mb-2 text-center text-3xl font-bold text-gray-900 dark:text-white">
         {item.title}
       </Text>
       <Text className="mb-2 text-center text-lg font-medium text-brand-500">
         {item.subtitle}
       </Text>
-      <Text className="text-center text-base leading-6 text-gray-500">
+      <Text className="text-center text-base leading-6 text-gray-500 dark:text-gray-400">
         {item.description}
       </Text>
     </View>
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView className="flex-1 bg-white dark:bg-gray-900">
       <View className="flex-1 justify-center">
         <FlatList
           ref={flatListRef}
@@ -115,7 +115,7 @@ export default function WelcomeScreen() {
               className={`mx-1 rounded-full ${
                 idx === activeIndex
                   ? 'h-2.5 w-6 bg-brand-500'
-                  : 'h-2.5 w-2.5 bg-gray-200'
+                  : 'h-2.5 w-2.5 bg-gray-200 dark:bg-gray-700'
               }`}
             />
           ))}

@@ -29,7 +29,7 @@ export default function BudgetScreen() {
   // No budget for this month
   if (!budget) {
     return (
-      <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
+      <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
         <EmptyState
           title="No Budget Yet"
           description="Create a budget for this month to start tracking your spending."
@@ -74,7 +74,7 @@ export default function BudgetScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
       <BudgetHeader summary={budget.summary} />
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
@@ -92,10 +92,11 @@ export default function BudgetScreen() {
 
               {/* Inline add item input */}
               {addingToGroup === group.id && (
-                <View className="flex-row items-center bg-white px-4 py-2">
+                <View className="flex-row items-center bg-white dark:bg-gray-800 px-4 py-2">
                   <TextInput
-                    className="flex-1 rounded-lg border border-brand-300 bg-white px-3 py-2 text-sm"
+                    className="flex-1 rounded-lg border border-brand-300 dark:border-brand-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white"
                     placeholder="Item name..."
+                    placeholderTextColor="#9CA3AF"
                     value={newItemName}
                     onChangeText={setNewItemName}
                     autoFocus

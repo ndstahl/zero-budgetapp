@@ -36,12 +36,12 @@ export default function DashboardScreen() {
   const activeFunds = funds.filter((f) => f.progress_percent < 1).slice(0, 3);
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <View className="bg-white px-4 pb-4 pt-4">
-          <Text className="text-lg text-gray-500">Hello, {firstName}</Text>
-          <Text className="text-2xl font-bold text-gray-900">
+        <View className="bg-white dark:bg-gray-800 px-4 pb-4 pt-4">
+          <Text className="text-lg text-gray-500 dark:text-gray-400">Hello, {firstName}</Text>
+          <Text className="text-2xl font-bold text-gray-900 dark:text-white">
             {getMonthName(selectedMonth)} {selectedYear}
           </Text>
         </View>
@@ -50,21 +50,21 @@ export default function DashboardScreen() {
           {/* Budget Overview Card */}
           {summary ? (
             <Card className="mb-4">
-              <Text className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">
+              <Text className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                 Budget Overview
               </Text>
               <View className="mb-3 flex-row justify-between">
                 <View>
-                  <Text className="text-xs text-gray-400">Spent</Text>
-                  <Text className="text-xl font-bold text-gray-900">
+                  <Text className="text-xs text-gray-400 dark:text-gray-500">Spent</Text>
+                  <Text className="text-xl font-bold text-gray-900 dark:text-white">
                     {formatCurrency(summary.total_spent)}
                   </Text>
                 </View>
                 <View className="items-end">
-                  <Text className="text-xs text-gray-400">
+                  <Text className="text-xs text-gray-400 dark:text-gray-500">
                     of {formatCurrency(summary.total_planned)}
                   </Text>
-                  <Text className="text-sm font-medium text-gray-500">
+                  <Text className="text-sm font-medium text-gray-500 dark:text-gray-400">
                     {formatPercent(summary.percent_spent)} used
                   </Text>
                 </View>
@@ -82,7 +82,7 @@ export default function DashboardScreen() {
               />
               <View className="mt-3 flex-row justify-between">
                 <View>
-                  <Text className="text-xs text-gray-400">Left to Spend</Text>
+                  <Text className="text-xs text-gray-400 dark:text-gray-500">Left to Spend</Text>
                   <Text
                     className={`text-lg font-bold ${
                       summary.left_to_spend >= 0 ? 'text-success-500' : 'text-danger-500'
@@ -92,7 +92,7 @@ export default function DashboardScreen() {
                   </Text>
                 </View>
                 <View className="items-end">
-                  <Text className="text-xs text-gray-400">Left to Budget</Text>
+                  <Text className="text-xs text-gray-400 dark:text-gray-500">Left to Budget</Text>
                   <Text
                     className={`text-lg font-bold ${
                       summary.left_to_budget === 0
@@ -109,10 +109,10 @@ export default function DashboardScreen() {
             <Card className="mb-4" onPress={() => router.push('/(tabs)/budget')}>
               <View className="items-center py-4">
                 <Wallet color="#4F46E5" size={32} />
-                <Text className="mt-2 text-base font-semibold text-gray-900">
+                <Text className="mt-2 text-base font-semibold text-gray-900 dark:text-white">
                   Create Your Budget
                 </Text>
-                <Text className="mt-1 text-sm text-gray-500">
+                <Text className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                   Tap here to set up your budget for this month
                 </Text>
               </View>
@@ -132,10 +132,10 @@ export default function DashboardScreen() {
             </Pressable>
             <Pressable
               onPress={() => router.push('/(tabs)/budget')}
-              className="flex-1 flex-row items-center rounded-xl bg-gray-100 px-4 py-3"
+              className="flex-1 flex-row items-center rounded-xl bg-gray-100 dark:bg-gray-800 px-4 py-3"
             >
-              <TrendingDown color="#374151" size={18} />
-              <Text className="ml-2 text-sm font-semibold text-gray-700">
+              <TrendingDown color="#9CA3AF" size={18} />
+              <Text className="ml-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
                 View Budget
               </Text>
             </Pressable>
@@ -147,7 +147,7 @@ export default function DashboardScreen() {
               <View className="mb-2 flex-row items-center justify-between">
                 <View className="flex-row items-center">
                   <Bell color="#F59E0B" size={16} />
-                  <Text className="ml-1 text-base font-bold text-gray-900">
+                  <Text className="ml-1 text-base font-bold text-gray-900 dark:text-white">
                     Bills Due Soon
                   </Text>
                 </View>
@@ -165,16 +165,16 @@ export default function DashboardScreen() {
                 {upcomingBills.map((bill, idx) => (
                   <View key={bill.id}>
                     <View className="flex-row items-center px-4 py-3">
-                      <View className="mr-3 h-9 w-9 items-center justify-center rounded-full bg-warning-50">
+                      <View className="mr-3 h-9 w-9 items-center justify-center rounded-full bg-warning-50 dark:bg-warning-500/20">
                         <CreditCard color="#F59E0B" size={16} />
                       </View>
                       <View className="flex-1">
-                        <Text className="text-sm font-medium text-gray-900">
+                        <Text className="text-sm font-medium text-gray-900 dark:text-white">
                           {bill.name}
                         </Text>
                         <View className="flex-row items-center">
                           <Calendar color="#9CA3AF" size={11} />
-                          <Text className="ml-1 text-xs text-gray-400">
+                          <Text className="ml-1 text-xs text-gray-400 dark:text-gray-500">
                             Due on the {bill.due_day}
                             {bill.due_day === 1
                               ? 'st'
@@ -187,13 +187,13 @@ export default function DashboardScreen() {
                         </View>
                       </View>
                       {bill.amount && (
-                        <Text className="text-sm font-semibold text-gray-900">
+                        <Text className="text-sm font-semibold text-gray-900 dark:text-white">
                           {formatCurrency(bill.amount)}
                         </Text>
                       )}
                     </View>
                     {idx < upcomingBills.length - 1 && (
-                      <View className="h-px bg-gray-100" />
+                      <View className="h-px bg-gray-100 dark:bg-gray-700" />
                     )}
                   </View>
                 ))}
@@ -207,7 +207,7 @@ export default function DashboardScreen() {
               <View className="mb-2 flex-row items-center justify-between">
                 <View className="flex-row items-center">
                   <PiggyBank color="#4F46E5" size={16} />
-                  <Text className="ml-1 text-base font-bold text-gray-900">
+                  <Text className="ml-1 text-base font-bold text-gray-900 dark:text-white">
                     Savings Goals
                   </Text>
                 </View>
@@ -239,7 +239,7 @@ export default function DashboardScreen() {
           {/* Recent Transactions */}
           <View className="mb-4">
             <View className="mb-2 flex-row items-center justify-between">
-              <Text className="text-base font-bold text-gray-900">
+              <Text className="text-base font-bold text-gray-900 dark:text-white">
                 Recent Transactions
               </Text>
               <Pressable
@@ -256,7 +256,7 @@ export default function DashboardScreen() {
             <Card padding="none">
               {transactions.length === 0 ? (
                 <View className="items-center py-8">
-                  <Text className="text-sm text-gray-400">
+                  <Text className="text-sm text-gray-400 dark:text-gray-500">
                     No transactions yet
                   </Text>
                 </View>
@@ -273,7 +273,7 @@ export default function DashboardScreen() {
                       }
                     />
                     {idx < transactions.length - 1 && (
-                      <View className="h-px bg-gray-100" />
+                      <View className="h-px bg-gray-100 dark:bg-gray-700" />
                     )}
                   </View>
                 ))

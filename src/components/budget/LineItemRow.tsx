@@ -24,24 +24,24 @@ export function LineItemRow({ item, onPress }: LineItemRowProps) {
   return (
     <Pressable
       onPress={onPress}
-      className="border-b border-gray-50 bg-white px-4 py-3 active:bg-gray-50"
+      className="border-b border-gray-50 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 active:bg-gray-50 dark:active:bg-gray-700"
     >
       <View className="flex-row items-center justify-between">
         <View className="flex-1 mr-2">
-          <Text className="text-sm font-medium text-gray-800" numberOfLines={1}>
+          <Text className="text-sm font-medium text-gray-800 dark:text-gray-100" numberOfLines={1}>
             {item.name}
           </Text>
         </View>
         <View className="flex-row">
-          <Text className="w-24 text-right text-sm text-gray-700">
+          <Text className="w-24 text-right text-sm text-gray-700 dark:text-gray-300">
             {formatCurrency(item.planned_amount)}
           </Text>
-          <Text className="w-24 text-right text-sm text-gray-700">
+          <Text className="w-24 text-right text-sm text-gray-700 dark:text-gray-300">
             {formatCurrency(item.spent_amount)}
           </Text>
           <Text
             className={`w-24 text-right text-sm font-medium ${
-              item.remaining_amount < 0 ? 'text-danger-500' : 'text-gray-700'
+              item.remaining_amount < 0 ? 'text-danger-500' : 'text-gray-700 dark:text-gray-300'
             }`}
           >
             {formatCurrency(item.remaining_amount)}

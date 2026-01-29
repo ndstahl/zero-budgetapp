@@ -21,16 +21,16 @@ const variantClasses: Record<ButtonVariant, { container: string; text: string }>
     text: 'text-white',
   },
   secondary: {
-    container: 'bg-brand-50 active:bg-brand-100',
-    text: 'text-brand-600',
+    container: 'bg-brand-50 dark:bg-brand-900 active:bg-brand-100 dark:active:bg-brand-800',
+    text: 'text-brand-600 dark:text-brand-300',
   },
   outline: {
-    container: 'border border-gray-300 bg-white active:bg-gray-50',
-    text: 'text-gray-700',
+    container: 'border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 active:bg-gray-50 dark:active:bg-gray-700',
+    text: 'text-gray-700 dark:text-gray-200',
   },
   ghost: {
-    container: 'bg-transparent active:bg-gray-100',
-    text: 'text-gray-700',
+    container: 'bg-transparent active:bg-gray-100 dark:active:bg-gray-800',
+    text: 'text-gray-700 dark:text-gray-200',
   },
   danger: {
     container: 'bg-danger-500 active:bg-danger-700',

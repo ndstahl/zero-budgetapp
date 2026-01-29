@@ -41,7 +41,7 @@ export default function SignInScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView className="flex-1 bg-white dark:bg-gray-900">
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         className="flex-1"
@@ -54,12 +54,12 @@ export default function SignInScreen() {
           {/* Header */}
           <View className="px-6 pt-4">
             <Pressable onPress={() => router.back()} className="mb-6">
-              <ArrowLeft color="#374151" size={24} />
+              <ArrowLeft color="#9CA3AF" size={24} />
             </Pressable>
-            <Text className="mb-2 text-3xl font-bold text-gray-900">
+            <Text className="mb-2 text-3xl font-bold text-gray-900 dark:text-white">
               Welcome back
             </Text>
-            <Text className="mb-8 text-base text-gray-500">
+            <Text className="mb-8 text-base text-gray-500 dark:text-gray-400">
               Sign in to your account to continue budgeting.
             </Text>
           </View>
@@ -112,7 +112,7 @@ export default function SignInScreen() {
 
           {/* Footer */}
           <View className="flex-row items-center justify-center px-6 pb-8 pt-4">
-            <Text className="text-base text-gray-500">Don't have an account? </Text>
+            <Text className="text-base text-gray-500 dark:text-gray-400">Don't have an account? </Text>
             <Pressable onPress={() => router.replace('/(auth)/sign-up')}>
               <Text className="text-base font-semibold text-brand-500">Sign Up</Text>
             </Pressable>

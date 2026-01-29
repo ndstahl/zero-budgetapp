@@ -71,17 +71,17 @@ export default function TransactionsScreen() {
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
       {/* Header */}
-      <View className="bg-white px-4 pb-3 pt-2">
+      <View className="bg-white dark:bg-gray-800 px-4 pb-3 pt-2">
         <View className="mb-3 flex-row items-center justify-between">
-          <Text className="text-2xl font-bold text-gray-900">Transactions</Text>
+          <Text className="text-2xl font-bold text-gray-900 dark:text-white">Transactions</Text>
           <View className="flex-row items-center">
             {hasLinkedAccounts && (
               <Pressable
                 onPress={() => syncTransactions(undefined)}
                 disabled={isSyncing}
-                className="mr-2 h-10 w-10 items-center justify-center rounded-full bg-gray-100"
+                className="mr-2 h-10 w-10 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700"
               >
                 <RefreshCw color={isSyncing ? '#9CA3AF' : '#4F46E5'} size={18} />
               </Pressable>
@@ -97,22 +97,22 @@ export default function TransactionsScreen() {
 
         {/* Sync Status Banner */}
         {isSyncing && (
-          <View className="mb-2 flex-row items-center rounded-lg bg-brand-50 px-3 py-2">
+          <View className="mb-2 flex-row items-center rounded-lg bg-brand-50 dark:bg-brand-900/30 px-3 py-2">
             <RefreshCw color="#4F46E5" size={14} />
-            <Text className="ml-2 text-sm text-brand-600">Syncing transactions...</Text>
+            <Text className="ml-2 text-sm text-brand-600 dark:text-brand-400">Syncing transactions...</Text>
           </View>
         )}
         {hasErrors && !isSyncing && (
           <Pressable
             onPress={() => router.push('/(stacks)/linked-accounts')}
-            className="mb-2 flex-row items-center rounded-lg bg-warning-50 px-3 py-2"
+            className="mb-2 flex-row items-center rounded-lg bg-warning-50 dark:bg-warning-500/20 px-3 py-2"
           >
             <AlertTriangle color="#F59E0B" size={14} />
-            <Text className="ml-2 flex-1 text-sm text-warning-700">
+            <Text className="ml-2 flex-1 text-sm text-warning-700 dark:text-warning-500">
               {errorItems.length} account{errorItems.length !== 1 ? 's' : ''} need
               attention
             </Text>
-            <Text className="text-xs font-medium text-warning-600">Fix</Text>
+            <Text className="text-xs font-medium text-warning-600 dark:text-warning-500">Fix</Text>
           </Pressable>
         )}
 
@@ -131,12 +131,12 @@ export default function TransactionsScreen() {
               key={key}
               onPress={() => setActiveFilter(key)}
               className={`mr-2 rounded-full px-3 py-1.5 ${
-                activeFilter === key ? 'bg-brand-500' : 'bg-gray-100'
+                activeFilter === key ? 'bg-brand-500' : 'bg-gray-100 dark:bg-gray-700'
               }`}
             >
               <Text
                 className={`text-sm font-medium ${
-                  activeFilter === key ? 'text-white' : 'text-gray-600'
+                  activeFilter === key ? 'text-white' : 'text-gray-600 dark:text-gray-300'
                 }`}
               >
                 {label}
@@ -164,7 +164,7 @@ export default function TransactionsScreen() {
           renderItem={renderTransaction}
           onRefresh={handleRefresh}
           refreshing={isLoading || isSyncing}
-          ItemSeparatorComponent={() => <View className="h-px bg-gray-100" />}
+          ItemSeparatorComponent={() => <View className="h-px bg-gray-100 dark:bg-gray-700" />}
           contentContainerStyle={{ paddingBottom: 100 }}
         />
       )}

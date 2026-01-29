@@ -11,32 +11,32 @@ interface TransactionCardProps {
 export function TransactionCard({ transaction, onPress }: TransactionCardProps) {
   const isIncome = transaction.type === 'income';
   const displayAmount = Math.abs(transaction.amount);
-  const amountColor = isIncome ? 'text-success-500' : 'text-gray-900';
+  const amountColor = isIncome ? 'text-success-500' : 'text-gray-900 dark:text-white';
   const amountPrefix = isIncome ? '+' : '-';
 
   return (
     <Pressable
       onPress={onPress}
-      className="flex-row items-center bg-white px-4 py-3 active:bg-gray-50"
+      className="flex-row items-center bg-white dark:bg-gray-800 px-4 py-3 active:bg-gray-50 dark:active:bg-gray-700"
     >
       {/* Icon / Avatar */}
       <View
         className={`mr-3 h-10 w-10 items-center justify-center rounded-full ${
-          isIncome ? 'bg-success-50' : 'bg-gray-100'
+          isIncome ? 'bg-success-50 dark:bg-success-500/20' : 'bg-gray-100 dark:bg-gray-700'
         }`}
       >
-        <Text className={`text-lg font-bold ${isIncome ? 'text-success-500' : 'text-gray-500'}`}>
+        <Text className={`text-lg font-bold ${isIncome ? 'text-success-500' : 'text-gray-500 dark:text-gray-400'}`}>
           {(transaction.merchant_name ?? transaction.description ?? '?')[0]?.toUpperCase()}
         </Text>
       </View>
 
       {/* Details */}
       <View className="flex-1">
-        <Text className="text-sm font-medium text-gray-900" numberOfLines={1}>
+        <Text className="text-sm font-medium text-gray-900 dark:text-white" numberOfLines={1}>
           {transaction.merchant_name ?? transaction.description ?? 'Transaction'}
         </Text>
         <View className="flex-row items-center mt-0.5">
-          <Text className="text-xs text-gray-400">{formatDate(transaction.date)}</Text>
+          <Text className="text-xs text-gray-400 dark:text-gray-500">{formatDate(transaction.date)}</Text>
           {transaction.line_item_name && (
             <Badge label={transaction.line_item_name} variant="default" />
           )}

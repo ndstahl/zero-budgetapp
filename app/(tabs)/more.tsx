@@ -22,6 +22,7 @@ import {
   DollarSign,
   Repeat,
   Info,
+  Palette,
 } from 'lucide-react-native';
 
 export default function MoreScreen() {
@@ -41,31 +42,31 @@ export default function MoreScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <View className="bg-white px-4 pb-4 pt-4">
-          <Text className="text-2xl font-bold text-gray-900">More</Text>
+        <View className="bg-white dark:bg-gray-800 px-4 pb-4 pt-4">
+          <Text className="text-2xl font-bold text-gray-900 dark:text-white">More</Text>
         </View>
 
         {/* Profile Card */}
         <View className="px-4 pt-4">
           <Card className="mb-4">
             <View className="flex-row items-center">
-              <View className="mr-3 h-12 w-12 items-center justify-center rounded-full bg-brand-100">
-                <Text className="text-lg font-bold text-brand-600">
+              <View className="mr-3 h-12 w-12 items-center justify-center rounded-full bg-brand-100 dark:bg-brand-900">
+                <Text className="text-lg font-bold text-brand-600 dark:text-brand-300">
                   {profile?.full_name?.[0]?.toUpperCase() ?? '?'}
                 </Text>
               </View>
               <View className="flex-1">
-                <Text className="text-base font-semibold text-gray-900">
+                <Text className="text-base font-semibold text-gray-900 dark:text-white">
                   {profile?.full_name ?? 'User'}
                 </Text>
-                <Text className="text-sm text-gray-500">{profile?.email}</Text>
+                <Text className="text-sm text-gray-500 dark:text-gray-400">{profile?.email}</Text>
               </View>
               {profile?.premium_tier === 'premium' && (
-                <View className="rounded-full bg-brand-50 px-2.5 py-1">
-                  <Text className="text-xs font-semibold text-brand-600">
+                <View className="rounded-full bg-brand-50 dark:bg-brand-900 px-2.5 py-1">
+                  <Text className="text-xs font-semibold text-brand-600 dark:text-brand-300">
                     Premium
                   </Text>
                 </View>
@@ -76,7 +77,7 @@ export default function MoreScreen() {
 
         {/* Menu Sections */}
         <View className="px-4">
-          <Text className="mb-2 text-xs font-bold uppercase tracking-wide text-gray-400">
+          <Text className="mb-2 text-xs font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500">
             Features
           </Text>
           <Card padding="none" className="mb-4">
@@ -110,11 +111,12 @@ export default function MoreScreen() {
             />
           </Card>
 
-          <Text className="mb-2 text-xs font-bold uppercase tracking-wide text-gray-400">
+          <Text className="mb-2 text-xs font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500">
             Settings
           </Text>
           <Card padding="none" className="mb-4">
             <MenuItem icon={User} label="Profile" onPress={() => router.push('/(stacks)/settings/profile')} />
+            <MenuItem icon={Palette} label="Appearance" onPress={() => router.push('/(stacks)/settings/appearance')} />
             <MenuItem icon={Bell} label="Notifications" onPress={() => router.push('/(stacks)/settings/notifications')} />
             <MenuItem icon={Shield} label="Security" onPress={() => router.push('/(stacks)/settings/security')} />
             <MenuItem icon={CreditCard} label="Subscription" onPress={() => router.push('/(stacks)/settings/subscription')} />
@@ -127,7 +129,7 @@ export default function MoreScreen() {
             <MenuItem icon={Download} label="Export Data" onPress={() => router.push('/(stacks)/settings/export-data')} />
           </Card>
 
-          <Text className="mb-2 text-xs font-bold uppercase tracking-wide text-gray-400">
+          <Text className="mb-2 text-xs font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500">
             Support
           </Text>
           <Card padding="none" className="mb-4">
@@ -139,7 +141,7 @@ export default function MoreScreen() {
           <Card padding="none" className="mb-8">
             <Pressable
               onPress={handleSignOut}
-              className="flex-row items-center px-4 py-3.5 active:bg-gray-50"
+              className="flex-row items-center px-4 py-3.5 active:bg-gray-50 dark:active:bg-gray-700"
             >
               <LogOut color="#EF4444" size={20} />
               <Text className="ml-3 flex-1 text-base font-medium text-danger-500">
@@ -169,16 +171,16 @@ function MenuItem({
   return (
     <Pressable
       onPress={onPress}
-      className="flex-row items-center border-b border-gray-50 px-4 py-3.5 active:bg-gray-50"
+      className="flex-row items-center border-b border-gray-50 dark:border-gray-700 px-4 py-3.5 active:bg-gray-50 dark:active:bg-gray-700"
     >
-      <Icon color="#6B7280" size={20} />
-      <Text className="ml-3 flex-1 text-base text-gray-900">{label}</Text>
+      <Icon color="#9CA3AF" size={20} />
+      <Text className="ml-3 flex-1 text-base text-gray-900 dark:text-white">{label}</Text>
       {premium && (
-        <View className="mr-2 rounded-full bg-brand-50 px-2 py-0.5">
+        <View className="mr-2 rounded-full bg-brand-50 dark:bg-brand-900 px-2 py-0.5">
           <Crown color="#4F46E5" size={12} />
         </View>
       )}
-      <ChevronRight color="#D1D5DB" size={18} />
+      <ChevronRight color="#6B7280" size={18} />
     </Pressable>
   );
 }

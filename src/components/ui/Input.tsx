@@ -19,20 +19,20 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(
     ? 'border-danger-500'
     : focused
       ? 'border-brand-500'
-      : 'border-gray-300';
+      : 'border-gray-300 dark:border-gray-600';
 
   return (
     <View className="w-full">
       {label && (
-        <Text className="mb-1.5 text-sm font-medium text-gray-700">{label}</Text>
+        <Text className="mb-1.5 text-sm font-medium text-gray-700 dark:text-gray-300">{label}</Text>
       )}
       <View
-        className={`flex-row items-center rounded-xl border bg-white px-3 py-3 ${borderColor}`}
+        className={`flex-row items-center rounded-xl border bg-white dark:bg-gray-800 px-3 py-3 ${borderColor}`}
       >
         {leftIcon && <View className="mr-2">{leftIcon}</View>}
         <TextInput
           ref={ref}
-          className="flex-1 text-base text-gray-900"
+          className="flex-1 text-base text-gray-900 dark:text-white"
           placeholderTextColor="#9CA3AF"
           onFocus={(e) => {
             setFocused(true);
@@ -47,7 +47,7 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(
         {rightIcon && <View className="ml-2">{rightIcon}</View>}
       </View>
       {error && <Text className="mt-1 text-sm text-danger-500">{error}</Text>}
-      {hint && !error && <Text className="mt-1 text-sm text-gray-400">{hint}</Text>}
+      {hint && !error && <Text className="mt-1 text-sm text-gray-400 dark:text-gray-500">{hint}</Text>}
     </View>
   );
 });

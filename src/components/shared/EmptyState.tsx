@@ -19,10 +19,10 @@ export function EmptyState({
   return (
     <View className="flex-1 items-center justify-center px-8 py-16">
       {icon && <View className="mb-4">{icon}</View>}
-      <Text className="mb-2 text-center text-xl font-bold text-gray-900">
+      <Text className="mb-2 text-center text-xl font-bold text-gray-900 dark:text-white">
         {title}
       </Text>
-      <Text className="mb-6 text-center text-base text-gray-500">
+      <Text className="mb-6 text-center text-base text-gray-500 dark:text-gray-400">
         {description}
       </Text>
       {actionTitle && onAction && (

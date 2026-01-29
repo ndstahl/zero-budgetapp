@@ -14,9 +14,9 @@ const paddingClasses = {
 };
 
 const variantClasses = {
-  default: 'bg-white rounded-2xl',
-  outlined: 'bg-white rounded-2xl border border-gray-200',
-  elevated: 'bg-white rounded-2xl shadow-sm shadow-black/5',
+  default: 'bg-white dark:bg-gray-800 rounded-2xl',
+  outlined: 'bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700',
+  elevated: 'bg-white dark:bg-gray-800 rounded-2xl shadow-sm shadow-black/5',
 };
 
 export function Card({
