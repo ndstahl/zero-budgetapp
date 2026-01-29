@@ -1,4 +1,4 @@
-import { View } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 
 interface ProgressBarProps {
   progress: number; // 0 to 1
@@ -6,17 +6,17 @@ interface ProgressBarProps {
   height?: 'sm' | 'md' | 'lg';
 }
 
-const colorClasses = {
-  brand: 'bg-brand-500',
-  success: 'bg-success-500',
-  warning: 'bg-warning-500',
-  danger: 'bg-danger-500',
+const colors = {
+  brand: '#4F46E5',
+  success: '#10B981',
+  warning: '#F59E0B',
+  danger: '#EF4444',
 };
 
-const heightClasses = {
-  sm: 'h-1.5',
-  md: 'h-2.5',
-  lg: 'h-4',
+const heights = {
+  sm: 6,
+  md: 10,
+  lg: 16,
 };
 
 export function ProgressBar({
@@ -26,13 +26,32 @@ export function ProgressBar({
 }: ProgressBarProps) {
   const clampedProgress = Math.max(0, Math.min(progress, 1));
   const widthPercent = `${Math.round(clampedProgress * 100)}%`;
+  const barHeight = heights[height];
 
   return (
-    <View className={`w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700 ${heightClasses[height]}`}>
+    <View style={[styles.track, { height: barHeight }]}>
       <View
-        className={`${heightClasses[height]} rounded-full ${colorClasses[color]}`}
-        style={{ width: widthPercent as any }}
+        style={[
+          styles.fill,
+          {
+            height: barHeight,
+            width: widthPercent as any,
+            backgroundColor: colors[color],
+          },
+        ]}
       />
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  track: {
+    width: '100%',
+    backgroundColor: '#E5E7EB',
+    borderRadius: 100,
+    overflow: 'hidden',
+  },
+  fill: {
+    borderRadius: 100,
+  },
+});

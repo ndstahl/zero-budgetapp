@@ -1,309 +1,542 @@
-import { View, Text, ScrollView, Pressable } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet, Modal, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import { useState } from 'react';
 import { useBudget } from '../../src/hooks/useBudget';
 import { useTransactions } from '../../src/hooks/useTransactions';
-import { useFunds } from '../../src/hooks/useFunds';
-import { useBillReminders } from '../../src/hooks/useBillReminders';
 import { useAuthStore } from '../../src/stores/authStore';
-import { Card } from '../../src/components/ui/Card';
-import { ProgressBar } from '../../src/components/ui/ProgressBar';
-import { TransactionCard } from '../../src/components/transactions/TransactionCard';
-import { FundCard } from '../../src/components/funds/FundCard';
-import { formatCurrency, formatPercent, getMonthName } from '../../src/utils/formatters';
 import { useUIStore } from '../../src/stores/uiStore';
-import {
-  Plus,
-  Wallet,
-  ArrowRight,
-  TrendingDown,
-  Bell,
-  Calendar,
-  CreditCard,
-  PiggyBank,
-} from 'lucide-react-native';
+import { useResolvedTheme } from '../../src/components/ThemeProvider';
+import { TransactionCard } from '../../src/components/transactions/TransactionCard';
+import { ProgressBar } from '../../src/components/ui/ProgressBar';
+import { formatCurrency, formatPercent, getMonthName } from '../../src/utils/formatters';
+import { Plus, ChevronRight, TrendingUp, TrendingDown, Wallet, X } from 'lucide-react-native';
 
 export default function DashboardScreen() {
+  const resolvedTheme = useResolvedTheme();
+  const isDark = resolvedTheme === 'dark';
+
   const profile = useAuthStore((s) => s.profile);
   const { selectedMonth, selectedYear } = useUIStore();
   const { budget } = useBudget();
   const { transactions } = useTransactions({ limit: 5 });
-  const { funds } = useFunds();
-  const { upcomingBills } = useBillReminders();
+
+  const [showIncomeModal, setShowIncomeModal] = useState(false);
 
   const firstName = profile?.full_name?.split(' ')[0] ?? 'there';
   const summary = budget?.summary;
-  const activeFunds = funds.filter((f) => f.progress_percent < 1).slice(0, 3);
+
+  // Get income transactions for the modal
+  const incomeTransactions = transactions.filter(t => t.type === 'income');
+
+  // Calculate spending as percentage of income (more intuitive than % of budget)
+  const spentPercent = summary && summary.actual_income > 0
+    ? summary.total_spent / summary.actual_income
+    : 0;
+  const remaining = summary
+    ? summary.actual_income - summary.total_spent
+    : 0;
+
+  const styles = createStyles(isDark);
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <View className="bg-white dark:bg-gray-800 px-4 pb-4 pt-4">
-          <Text className="text-lg text-gray-500 dark:text-gray-400">Hello, {firstName}</Text>
-          <Text className="text-2xl font-bold text-gray-900 dark:text-white">
+        <View style={styles.header}>
+          <Text style={styles.greeting}>Hello, {firstName}</Text>
+          <Text style={styles.monthTitle}>
             {getMonthName(selectedMonth)} {selectedYear}
           </Text>
         </View>
 
-        <View className="px-4 pt-4">
-          {/* Budget Overview Card */}
+        <View style={styles.content}>
+          {/* Quick Overview Card */}
           {summary ? (
-            <Card className="mb-4">
-              <Text className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                Budget Overview
-              </Text>
-
-              {/* Income Row */}
-              <View className="mb-3 flex-row justify-between items-center">
-                <View>
-                  <Text className="text-xs text-gray-400 dark:text-gray-500">Income Received</Text>
-                  <Text className="text-xl font-bold text-success-500">
+            <View style={styles.overviewCard}>
+              {/* Income Row - Opens modal to view/edit incomes */}
+              <Pressable
+                onPress={() => setShowIncomeModal(true)}
+                style={({ pressed }) => [styles.statRow, pressed && styles.statRowPressed]}
+              >
+                <View style={styles.statLeft}>
+                  <View style={[styles.statIcon, styles.statIconIncome]}>
+                    <TrendingUp color="#10B981" size={18} />
+                  </View>
+                  <View>
+                    <Text style={styles.statLabel}>Income Received</Text>
+                    <Text style={styles.statHint}>Tap to view & edit</Text>
+                  </View>
+                </View>
+                <View style={styles.statRight}>
+                  <Text style={styles.incomeAmount}>
                     {formatCurrency(summary.actual_income)}
                   </Text>
+                  <ChevronRight color={isDark ? '#6B7280' : '#9CA3AF'} size={16} />
                 </View>
-                <View className="items-end">
-                  <Text className="text-xs text-gray-400 dark:text-gray-500">
-                    of {formatCurrency(summary.total_income)} planned
-                  </Text>
-                </View>
-              </View>
+              </Pressable>
 
-              {/* Divider */}
-              <View className="h-px bg-gray-100 dark:bg-gray-700 mb-3" />
+              <View style={styles.divider} />
 
-              {/* Spending Row */}
-              <View className="mb-3 flex-row justify-between">
-                <View>
-                  <Text className="text-xs text-gray-400 dark:text-gray-500">Spent</Text>
-                  <Text className="text-xl font-bold text-gray-900 dark:text-white">
-                    {formatCurrency(summary.total_spent)}
-                  </Text>
-                </View>
-                <View className="items-end">
-                  <Text className="text-xs text-gray-400 dark:text-gray-500">
-                    of {formatCurrency(summary.total_planned)} budgeted
-                  </Text>
-                  <Text className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                    {formatPercent(summary.percent_spent)} used
-                  </Text>
-                </View>
-              </View>
-              <ProgressBar
-                progress={summary.percent_spent}
-                color={
-                  summary.percent_spent > 1
-                    ? 'danger'
-                    : summary.percent_spent > 0.8
-                      ? 'warning'
-                      : 'brand'
-                }
-                height="md"
-              />
-              <View className="mt-3 flex-row justify-between">
-                <View>
-                  <Text className="text-xs text-gray-400 dark:text-gray-500">Left to Spend</Text>
-                  <Text
-                    className={`text-lg font-bold ${
-                      summary.left_to_spend >= 0 ? 'text-success-500' : 'text-danger-500'
-                    }`}
-                  >
-                    {formatCurrency(summary.left_to_spend)}
-                  </Text>
-                </View>
-                <View className="items-end">
-                  <Text className="text-xs text-gray-400 dark:text-gray-500">Left to Budget</Text>
-                  <Text
-                    className={`text-lg font-bold ${
-                      summary.left_to_budget === 0
-                        ? 'text-success-500'
-                        : 'text-brand-500'
-                    }`}
-                  >
-                    {formatCurrency(summary.left_to_budget)}
-                  </Text>
-                </View>
-              </View>
-            </Card>
-          ) : (
-            <Card className="mb-4" onPress={() => router.push('/(tabs)/budget')}>
-              <View className="items-center py-4">
-                <Wallet color="#4F46E5" size={32} />
-                <Text className="mt-2 text-base font-semibold text-gray-900 dark:text-white">
-                  Create Your Budget
-                </Text>
-                <Text className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                  Tap here to set up your budget for this month
-                </Text>
-              </View>
-            </Card>
-          )}
-
-          {/* Quick Actions */}
-          <View className="mb-4 flex-row">
-            <Pressable
-              onPress={() => router.push('/(stacks)/add-transaction')}
-              className="mr-2 flex-1 flex-row items-center rounded-xl bg-brand-500 px-4 py-3"
-            >
-              <Plus color="#FFFFFF" size={18} />
-              <Text className="ml-2 text-sm font-semibold text-white">
-                Add Transaction
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={() => router.push('/(tabs)/budget')}
-              className="flex-1 flex-row items-center rounded-xl bg-gray-100 dark:bg-gray-800 px-4 py-3"
-            >
-              <TrendingDown color="#9CA3AF" size={18} />
-              <Text className="ml-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
-                View Budget
-              </Text>
-            </Pressable>
-          </View>
-
-          {/* Upcoming Bills */}
-          {upcomingBills.length > 0 && (
-            <View className="mb-4">
-              <View className="mb-2 flex-row items-center justify-between">
-                <View className="flex-row items-center">
-                  <Bell color="#F59E0B" size={16} />
-                  <Text className="ml-1 text-base font-bold text-gray-900 dark:text-white">
-                    Bills Due Soon
-                  </Text>
-                </View>
-                <Pressable
-                  onPress={() => router.push('/(stacks)/bill-reminders')}
-                  className="flex-row items-center"
-                >
-                  <Text className="text-sm font-medium text-brand-500">
-                    Manage
-                  </Text>
-                  <ArrowRight color="#4F46E5" size={14} />
-                </Pressable>
-              </View>
-              <Card padding="none">
-                {upcomingBills.map((bill, idx) => (
-                  <View key={bill.id}>
-                    <View className="flex-row items-center px-4 py-3">
-                      <View className="mr-3 h-9 w-9 items-center justify-center rounded-full bg-warning-50 dark:bg-warning-500/20">
-                        <CreditCard color="#F59E0B" size={16} />
-                      </View>
-                      <View className="flex-1">
-                        <Text className="text-sm font-medium text-gray-900 dark:text-white">
-                          {bill.name}
-                        </Text>
-                        <View className="flex-row items-center">
-                          <Calendar color="#9CA3AF" size={11} />
-                          <Text className="ml-1 text-xs text-gray-400 dark:text-gray-500">
-                            Due on the {bill.due_day}
-                            {bill.due_day === 1
-                              ? 'st'
-                              : bill.due_day === 2
-                                ? 'nd'
-                                : bill.due_day === 3
-                                  ? 'rd'
-                                  : 'th'}
-                          </Text>
-                        </View>
-                      </View>
-                      {bill.amount && (
-                        <Text className="text-sm font-semibold text-gray-900 dark:text-white">
-                          {formatCurrency(bill.amount)}
-                        </Text>
-                      )}
-                    </View>
-                    {idx < upcomingBills.length - 1 && (
-                      <View className="h-px bg-gray-100 dark:bg-gray-700" />
-                    )}
-                  </View>
-                ))}
-              </Card>
-            </View>
-          )}
-
-          {/* Savings Funds */}
-          {activeFunds.length > 0 && (
-            <View className="mb-4">
-              <View className="mb-2 flex-row items-center justify-between">
-                <View className="flex-row items-center">
-                  <PiggyBank color="#4F46E5" size={16} />
-                  <Text className="ml-1 text-base font-bold text-gray-900 dark:text-white">
-                    Savings Goals
-                  </Text>
-                </View>
-                <Pressable
-                  onPress={() => router.push('/(stacks)/add-fund')}
-                  className="flex-row items-center"
-                >
-                  <Text className="text-sm font-medium text-brand-500">
-                    Add Fund
-                  </Text>
-                  <ArrowRight color="#4F46E5" size={14} />
-                </Pressable>
-              </View>
-              {activeFunds.map((fund) => (
-                <FundCard
-                  key={fund.id}
-                  fund={fund}
-                  onPress={() =>
-                    router.push({
-                      pathname: '/(stacks)/fund-detail',
-                      params: { id: fund.id },
-                    })
-                  }
-                />
-              ))}
-            </View>
-          )}
-
-          {/* Recent Transactions */}
-          <View className="mb-4">
-            <View className="mb-2 flex-row items-center justify-between">
-              <Text className="text-base font-bold text-gray-900 dark:text-white">
-                Recent Transactions
-              </Text>
+              {/* Spent Row */}
               <Pressable
                 onPress={() => router.push('/(tabs)/transactions')}
-                className="flex-row items-center"
+                style={({ pressed }) => [styles.statRow, pressed && styles.statRowPressed]}
               >
-                <Text className="text-sm font-medium text-brand-500">
-                  See All
+                <View style={styles.statLeft}>
+                  <View style={[styles.statIcon, styles.statIconExpense]}>
+                    <TrendingDown color="#EF4444" size={18} />
+                  </View>
+                  <View>
+                    <Text style={styles.statLabel}>Spent</Text>
+                    <Text style={styles.statHint}>Tap to view transactions</Text>
+                  </View>
+                </View>
+                <View style={styles.statRight}>
+                  <Text style={styles.expenseAmount}>
+                    {formatCurrency(summary.total_spent)}
+                  </Text>
+                  <ChevronRight color={isDark ? '#6B7280' : '#9CA3AF'} size={16} />
+                </View>
+              </Pressable>
+
+              <View style={styles.divider} />
+
+              {/* Remaining / Progress */}
+              <View style={styles.progressSection}>
+                <View style={styles.progressHeader}>
+                  <Text style={styles.progressLabel}>Remaining</Text>
+                  <Text style={[styles.remainingAmount, remaining < 0 && styles.negativeAmount]}>
+                    {formatCurrency(remaining)}
+                  </Text>
+                </View>
+                <ProgressBar
+                  progress={Math.min(spentPercent, 1)}
+                  color={
+                    spentPercent > 1
+                      ? 'danger'
+                      : spentPercent > 0.8
+                        ? 'warning'
+                        : 'success'
+                  }
+                  height="sm"
+                />
+                <Text style={styles.progressFooterText}>
+                  {formatPercent(spentPercent)} of income spent
                 </Text>
-                <ArrowRight color="#4F46E5" size={14} />
+              </View>
+            </View>
+          ) : (
+            <Pressable
+              onPress={() => router.push('/(tabs)/budget')}
+              style={styles.emptyBudgetCard}
+            >
+              <Wallet color="#4F46E5" size={32} />
+              <Text style={styles.emptyBudgetTitle}>Create Your Budget</Text>
+              <Text style={styles.emptyBudgetText}>
+                Tap here to set up your budget for this month
+              </Text>
+            </Pressable>
+          )}
+
+          {/* Add Transaction Button */}
+          <Pressable
+            onPress={() => router.push('/(stacks)/add-transaction')}
+            style={({ pressed }) => [styles.addButton, pressed && styles.addButtonPressed]}
+          >
+            <Plus color="#FFFFFF" size={20} />
+            <Text style={styles.addButtonText}>Add Transaction</Text>
+          </Pressable>
+
+          {/* Recent Transactions */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Recent Transactions</Text>
+              <Pressable
+                onPress={() => router.push('/(tabs)/transactions')}
+                style={styles.seeAllButton}
+              >
+                <Text style={styles.seeAllText}>See All</Text>
+                <ChevronRight color="#4F46E5" size={16} />
               </Pressable>
             </View>
 
-            <Card padding="none">
+            <View style={styles.transactionsList}>
               {transactions.length === 0 ? (
-                <View className="items-center py-8">
-                  <Text className="text-sm text-gray-400 dark:text-gray-500">
-                    No transactions yet
-                  </Text>
+                <View style={styles.emptyTransactions}>
+                  <Text style={styles.emptyTransactionsText}>No transactions yet</Text>
                 </View>
               ) : (
-                transactions.map((tx, idx) => (
-                  <View key={tx.id}>
-                    <TransactionCard
-                      transaction={tx}
-                      onPress={() =>
-                        router.push({
-                          pathname: '/(stacks)/edit-transaction',
-                          params: { id: tx.id },
-                        })
-                      }
-                    />
-                    {idx < transactions.length - 1 && (
-                      <View className="h-px bg-gray-100 dark:bg-gray-700" />
-                    )}
-                  </View>
+                transactions.map((tx) => (
+                  <TransactionCard
+                    key={tx.id}
+                    transaction={tx}
+                    isDark={isDark}
+                    onPress={() =>
+                      router.push({
+                        pathname: '/(stacks)/edit-transaction',
+                        params: { id: tx.id },
+                      })
+                    }
+                  />
                 ))
               )}
-            </Card>
+            </View>
           </View>
         </View>
 
-        <View className="h-24" />
+        <View style={{ height: 100 }} />
       </ScrollView>
+
+      {/* Income Modal */}
+      <Modal
+        visible={showIncomeModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowIncomeModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Income</Text>
+            <Pressable onPress={() => setShowIncomeModal(false)} style={styles.modalCloseButton}>
+              <X color={isDark ? '#FFFFFF' : '#111827'} size={24} />
+            </Pressable>
+          </View>
+
+          <View style={styles.modalSummary}>
+            <Text style={styles.modalSummaryLabel}>Total Received</Text>
+            <Text style={styles.modalSummaryAmount}>
+              {formatCurrency(summary?.actual_income ?? 0)}
+            </Text>
+          </View>
+
+          {incomeTransactions.length === 0 ? (
+            <View style={styles.modalEmpty}>
+              <Text style={styles.modalEmptyText}>No income recorded yet</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={incomeTransactions}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={styles.modalList}
+              ItemSeparatorComponent={() => <View style={styles.modalItemSeparator} />}
+              renderItem={({ item }) => (
+                <TransactionCard
+                  transaction={item}
+                  isDark={isDark}
+                  onPress={() => {
+                    setShowIncomeModal(false);
+                    router.push({
+                      pathname: '/(stacks)/edit-transaction',
+                      params: { id: item.id },
+                    });
+                  }}
+                />
+              )}
+            />
+          )}
+
+          <View style={styles.modalFooter}>
+            <Pressable
+              onPress={() => {
+                setShowIncomeModal(false);
+                router.push('/(stacks)/add-transaction');
+              }}
+              style={styles.modalAddButton}
+            >
+              <Plus color="#FFFFFF" size={20} />
+              <Text style={styles.modalAddButtonText}>Add Income</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
+
+const createStyles = (isDark: boolean) => StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: isDark ? '#111827' : '#F9FAFB',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  header: {
+    backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 20,
+  },
+  greeting: {
+    fontSize: 16,
+    color: isDark ? '#9CA3AF' : '#6B7280',
+  },
+  monthTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: isDark ? '#FFFFFF' : '#111827',
+    marginTop: 4,
+  },
+  content: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  overviewCard: {
+    backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+    borderRadius: 20,
+    padding: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: isDark ? 0.3 : 0.08,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  statRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderRadius: 16,
+  },
+  statRowPressed: {
+    backgroundColor: isDark ? '#374151' : '#F9FAFB',
+  },
+  statLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+  },
+  statIconIncome: {
+    backgroundColor: isDark ? 'rgba(16, 185, 129, 0.15)' : '#ECFDF5',
+  },
+  statIconExpense: {
+    backgroundColor: isDark ? 'rgba(239, 68, 68, 0.15)' : '#FEF2F2',
+  },
+  statLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: isDark ? '#FFFFFF' : '#111827',
+  },
+  statHint: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    marginTop: 2,
+  },
+  statRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  incomeAmount: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#10B981',
+    marginRight: 6,
+  },
+  expenseAmount: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: isDark ? '#FFFFFF' : '#111827',
+    marginRight: 6,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: isDark ? '#374151' : '#F3F4F6',
+    marginHorizontal: 16,
+  },
+  progressSection: {
+    padding: 16,
+  },
+  progressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  progressLabel: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: isDark ? '#D1D5DB' : '#374151',
+  },
+  remainingAmount: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#10B981',
+  },
+  negativeAmount: {
+    color: '#EF4444',
+  },
+  progressFooterText: {
+    fontSize: 13,
+    color: '#9CA3AF',
+    marginTop: 8,
+  },
+  emptyBudgetCard: {
+    backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+    borderRadius: 20,
+    padding: 32,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: isDark ? 0.3 : 0.08,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  emptyBudgetTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: isDark ? '#FFFFFF' : '#111827',
+    marginTop: 12,
+  },
+  emptyBudgetText: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  addButton: {
+    backgroundColor: '#4F46E5',
+    borderRadius: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    marginTop: 20,
+  },
+  addButtonPressed: {
+    opacity: 0.9,
+  },
+  addButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  section: {
+    marginTop: 28,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: isDark ? '#FFFFFF' : '#111827',
+  },
+  seeAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  seeAllText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#4F46E5',
+  },
+  transactionsList: {
+    backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+    borderRadius: 20,
+    paddingVertical: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: isDark ? 0.3 : 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  emptyTransactions: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  emptyTransactionsText: {
+    fontSize: 14,
+    color: '#9CA3AF',
+  },
+  // Modal styles
+  modalContainer: {
+    flex: 1,
+    backgroundColor: isDark ? '#111827' : '#F9FAFB',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 16,
+    backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: isDark ? '#374151' : '#E5E7EB',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: isDark ? '#FFFFFF' : '#111827',
+  },
+  modalCloseButton: {
+    padding: 4,
+  },
+  modalSummary: {
+    backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: isDark ? '#374151' : '#E5E7EB',
+  },
+  modalSummaryLabel: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    marginBottom: 4,
+  },
+  modalSummaryAmount: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: '#10B981',
+  },
+  modalEmpty: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+  },
+  modalEmptyText: {
+    fontSize: 15,
+    color: '#9CA3AF',
+  },
+  modalList: {
+    paddingTop: 16,
+    paddingHorizontal: 16,
+  },
+  modalItemSeparator: {
+    height: 8,
+  },
+  modalFooter: {
+    padding: 16,
+    paddingBottom: 34,
+    backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: isDark ? '#374151' : '#E5E7EB',
+  },
+  modalAddButton: {
+    backgroundColor: '#10B981',
+    borderRadius: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+  },
+  modalAddButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+});

@@ -1,15 +1,11 @@
-import { View, Text, ScrollView, Pressable, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, Text, ScrollView, Pressable, KeyboardAvoidingView, Platform, Alert, StyleSheet, TextInput, Modal } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useState, useEffect } from 'react';
+import { Calendar } from 'react-native-calendars';
 import { useTransactions } from '../../src/hooks/useTransactions';
 import { useBudget } from '../../src/hooks/useBudget';
-import { Button } from '../../src/components/ui/Button';
-import { Input } from '../../src/components/ui/Input';
-import { CurrencyInput } from '../../src/components/shared/CurrencyInput';
-import { Card } from '../../src/components/ui/Card';
 import { formatCurrency } from '../../src/utils/formatters';
-import Toast from 'react-native-toast-message';
-import { Trash2, Split } from 'lucide-react-native';
+import { Trash2, Split, Calendar as CalendarIcon } from 'lucide-react-native';
 import type { TransactionType } from '../../src/types/transaction';
 
 export default function EditTransactionScreen() {
@@ -19,22 +15,23 @@ export default function EditTransactionScreen() {
 
   const transaction = transactions.find((t) => t.id === id);
 
-  const [amount, setAmount] = useState(0);
+  const [amount, setAmount] = useState('');
   const [merchantName, setMerchantName] = useState('');
   const [description, setDescription] = useState('');
   const [type, setType] = useState<TransactionType>('expense');
-  const [date, setDate] = useState('');
+  const [date, setDate] = useState(new Date());
   const [selectedLineItemId, setSelectedLineItemId] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   useEffect(() => {
     if (transaction) {
-      setAmount(Math.abs(transaction.amount));
+      setAmount((Math.abs(transaction.amount) / 100).toFixed(2));
       setMerchantName(transaction.merchant_name ?? '');
       setDescription(transaction.description ?? '');
       setType(transaction.type);
-      setDate(transaction.date);
+      setDate(new Date(transaction.date + 'T12:00:00'));
       setSelectedLineItemId(transaction.line_item_id);
       setNotes(transaction.notes ?? '');
     }
@@ -42,35 +39,40 @@ export default function EditTransactionScreen() {
 
   if (!transaction) {
     return (
-      <View className="flex-1 items-center justify-center bg-white">
-        <Text className="text-gray-500">Transaction not found</Text>
+      <View style={styles.notFoundContainer}>
+        <Text style={styles.notFoundText}>Transaction not found</Text>
       </View>
     );
   }
 
+  // Filter line items based on transaction type
   const lineItems = budget?.category_groups
-    .filter((g) => !g.is_income)
-    .flatMap((g) =>
-      g.line_items.map((item) => ({
+    ?.filter((g) => (type === 'income' ? g.is_income : !g.is_income))
+    ?.flatMap((g) =>
+      (g.line_items || []).map((item) => ({
         ...item,
         groupName: g.name,
       }))
     ) ?? [];
 
   const handleSave = () => {
-    if (amount === 0) {
-      Toast.show({ type: 'error', text1: 'Amount required' });
+    const amountCents = Math.round(parseFloat(amount || '0') * 100);
+    if (amountCents === 0) {
+      Alert.alert('Amount required', 'Enter a transaction amount');
       return;
     }
+
+    const dateString = date.toISOString().split('T')[0];
+
     setLoading(true);
     updateTransaction(
       {
         id: transaction.id,
         updates: {
-          amount,
+          amount: amountCents,
           merchant_name: merchantName || undefined,
           description: description || undefined,
-          date,
+          date: dateString,
           type,
           line_item_id: selectedLineItemId ?? undefined,
           notes: notes || undefined,
@@ -78,13 +80,14 @@ export default function EditTransactionScreen() {
       },
       {
         onSuccess: () => {
-          Toast.show({ type: 'success', text1: 'Transaction updated' });
-          router.back();
+          Alert.alert('Success', 'Transaction updated', [
+            { text: 'OK', onPress: () => router.back() }
+          ]);
         },
-        onError: (err: any) => {
-          Toast.show({ type: 'error', text1: 'Error', text2: err.message });
+        onError: (err: Error) => {
+          Alert.alert('Error', err.message);
+          setLoading(false);
         },
-        onSettled: () => setLoading(false),
       }
     );
   };
@@ -113,80 +116,195 @@ export default function EditTransactionScreen() {
     });
   };
 
+  const handleDateSelect = (day: { dateString: string }) => {
+    setDate(new Date(day.dateString + 'T12:00:00'));
+    setShowDatePicker(false);
+  };
+
+  const formatDisplayDate = (d: Date) => {
+    return d.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
+
+  const getDateString = (d: Date) => {
+    return d.toISOString().split('T')[0];
+  };
+
+  // Reset line item when type changes
+  useEffect(() => {
+    if (transaction && type !== transaction.type) {
+      setSelectedLineItemId(null);
+    }
+  }, [type, transaction]);
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      className="flex-1 bg-white"
+      style={styles.container}
     >
       <ScrollView
-        className="flex-1"
-        contentContainerStyle={{ padding: 16 }}
+        style={styles.scrollView}
+        contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
         {/* Type Selector */}
-        <View className="mb-4 flex-row rounded-xl bg-gray-100 p-1">
-          {(['expense', 'income'] as TransactionType[]).map((t) => (
-            <Pressable
-              key={t}
-              onPress={() => setType(t)}
-              className={`flex-1 items-center rounded-lg py-2.5 ${
-                type === t ? 'bg-white shadow-sm' : ''
-              }`}
-            >
-              <Text className={`text-sm font-semibold ${type === t ? 'text-gray-900' : 'text-gray-500'}`}>
-                {t === 'expense' ? 'Expense' : 'Income'}
-              </Text>
-            </Pressable>
-          ))}
+        <View style={styles.typeSelector}>
+          <Pressable
+            onPress={() => setType('expense')}
+            style={[styles.typeButton, type === 'expense' && styles.typeButtonActive]}
+          >
+            <Text style={[styles.typeText, type === 'expense' && styles.typeTextActive]}>
+              Expense
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => setType('income')}
+            style={[styles.typeButton, type === 'income' && styles.typeButtonActive]}
+          >
+            <Text style={[styles.typeText, type === 'income' && styles.typeTextActive]}>
+              Income
+            </Text>
+          </Pressable>
         </View>
 
-        <View className="mb-4">
-          <CurrencyInput value={amount} onChangeValue={setAmount} label="Amount" />
+        {/* Amount */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Amount</Text>
+          <View style={styles.amountContainer}>
+            <Text style={styles.currencySymbol}>$</Text>
+            <TextInput
+              style={styles.amountInput}
+              value={amount}
+              onChangeText={setAmount}
+              keyboardType="decimal-pad"
+              placeholder="0.00"
+              placeholderTextColor="#9CA3AF"
+            />
+          </View>
         </View>
 
-        <View className="mb-4">
-          <Input
-            label="Merchant / Payee"
-            placeholder="e.g. Walmart, Starbucks"
+        {/* Merchant Name */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Merchant / Payee</Text>
+          <TextInput
+            style={styles.textInput}
             value={merchantName}
             onChangeText={setMerchantName}
+            placeholder="e.g. Walmart, Starbucks"
+            placeholderTextColor="#9CA3AF"
           />
         </View>
 
-        <View className="mb-4">
-          <Input
-            label="Description (optional)"
+        {/* Description */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Description (optional)</Text>
+          <TextInput
+            style={styles.textInput}
             value={description}
             onChangeText={setDescription}
+            placeholder="What was this for?"
+            placeholderTextColor="#9CA3AF"
           />
         </View>
 
-        <View className="mb-4">
-          <Input label="Date" value={date} onChangeText={setDate} />
+        {/* Date Picker */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Date</Text>
+          <Pressable
+            onPress={() => setShowDatePicker(true)}
+            style={styles.dateButton}
+          >
+            <CalendarIcon color="#6B7280" size={20} />
+            <Text style={styles.dateText}>{formatDisplayDate(date)}</Text>
+          </Pressable>
         </View>
 
-        <View className="mb-4">
-          <Input
-            label="Notes (optional)"
-            placeholder="Any additional notes"
+        {/* Calendar Modal */}
+        <Modal
+          visible={showDatePicker}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowDatePicker(false)}
+        >
+          <Pressable
+            style={styles.modalOverlay}
+            onPress={() => setShowDatePicker(false)}
+          >
+            <Pressable style={styles.calendarContainer}>
+              <View style={styles.calendarHeader}>
+                <Text style={styles.calendarTitle}>Select Date</Text>
+                <Pressable onPress={() => setShowDatePicker(false)}>
+                  <Text style={styles.calendarDoneText}>Done</Text>
+                </Pressable>
+              </View>
+              <Calendar
+                current={getDateString(date)}
+                onDayPress={handleDateSelect}
+                markedDates={{
+                  [getDateString(date)]: {
+                    selected: true,
+                    selectedColor: '#4F46E5',
+                  },
+                }}
+                theme={{
+                  backgroundColor: '#FFFFFF',
+                  calendarBackground: '#FFFFFF',
+                  textSectionTitleColor: '#6B7280',
+                  selectedDayBackgroundColor: '#4F46E5',
+                  selectedDayTextColor: '#FFFFFF',
+                  todayTextColor: '#4F46E5',
+                  dayTextColor: '#111827',
+                  textDisabledColor: '#D1D5DB',
+                  arrowColor: '#4F46E5',
+                  monthTextColor: '#111827',
+                  textMonthFontWeight: '600',
+                  textDayFontSize: 16,
+                  textMonthFontSize: 17,
+                  textDayHeaderFontSize: 13,
+                }}
+              />
+            </Pressable>
+          </Pressable>
+        </Modal>
+
+        {/* Notes */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Notes (optional)</Text>
+          <TextInput
+            style={[styles.textInput, styles.notesInput]}
             value={notes}
             onChangeText={setNotes}
+            placeholder="Any additional notes"
+            placeholderTextColor="#9CA3AF"
             multiline
+            numberOfLines={3}
           />
         </View>
 
         {/* Category Picker */}
-        {type === 'expense' && lineItems.length > 0 && (
-          <View className="mb-4">
-            <Text className="mb-2 text-sm font-medium text-gray-700">Category</Text>
-            <Card variant="outlined" padding="none">
+        {lineItems.length > 0 && (
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>
+              {type === 'income' ? 'Income Source' : 'Category'}
+            </Text>
+            <View style={styles.categoryList}>
               <Pressable
                 onPress={() => setSelectedLineItemId(null)}
-                className={`border-b border-gray-50 px-4 py-3 ${
-                  !selectedLineItemId ? 'bg-brand-50' : ''
-                }`}
+                style={[
+                  styles.categoryItem,
+                  !selectedLineItemId && styles.categoryItemActive,
+                ]}
               >
-                <Text className={`text-sm ${!selectedLineItemId ? 'font-semibold text-brand-600' : 'text-gray-500'}`}>
+                <Text
+                  style={[
+                    styles.categoryName,
+                    !selectedLineItemId && styles.categoryNameActive,
+                  ]}
+                >
                   Uncategorized
                 </Text>
               </Pressable>
@@ -194,47 +312,277 @@ export default function EditTransactionScreen() {
                 <Pressable
                   key={item.id}
                   onPress={() => setSelectedLineItemId(item.id)}
-                  className={`border-b border-gray-50 px-4 py-3 ${
-                    selectedLineItemId === item.id ? 'bg-brand-50' : ''
-                  }`}
+                  style={[
+                    styles.categoryItem,
+                    selectedLineItemId === item.id && styles.categoryItemActive,
+                  ]}
                 >
-                  <Text className={`text-sm ${selectedLineItemId === item.id ? 'font-semibold text-brand-600' : 'text-gray-700'}`}>
+                  <Text
+                    style={[
+                      styles.categoryName,
+                      selectedLineItemId === item.id && styles.categoryNameActive,
+                    ]}
+                  >
                     {item.name}
                   </Text>
-                  <Text className="text-xs text-gray-400">{item.groupName}</Text>
+                  <Text style={styles.categoryGroup}>{item.groupName}</Text>
                 </Pressable>
               ))}
-            </Card>
+            </View>
           </View>
         )}
 
-        {/* Actions */}
-        <View className="mt-2 space-y-3">
-          <Button title="Save Changes" onPress={handleSave} loading={loading} size="lg" fullWidth />
+        {/* Save Button */}
+        <Pressable
+          onPress={handleSave}
+          disabled={loading}
+          style={[styles.saveButton, loading && styles.saveButtonDisabled]}
+        >
+          <Text style={styles.saveButtonText}>
+            {loading ? 'Saving...' : 'Save Changes'}
+          </Text>
+        </Pressable>
 
-          {!transaction.is_split && transaction.type === 'expense' && (
-            <Button
-              title="Split Transaction"
-              onPress={handleSplit}
-              variant="outline"
-              icon={<Split color="#374151" size={16} />}
-              size="lg"
-              fullWidth
-            />
-          )}
+        {/* Split Transaction Button */}
+        {!transaction.is_split && transaction.type === 'expense' && (
+          <Pressable onPress={handleSplit} style={styles.splitButton}>
+            <Split color="#374151" size={16} />
+            <Text style={styles.splitButtonText}>Split Transaction</Text>
+          </Pressable>
+        )}
 
-          <Button
-            title="Delete Transaction"
-            onPress={handleDelete}
-            variant="danger"
-            icon={<Trash2 color="#FFFFFF" size={16} />}
-            size="lg"
-            fullWidth
-          />
-        </View>
+        {/* Delete Button */}
+        <Pressable onPress={handleDelete} style={styles.deleteButton}>
+          <Trash2 color="#FFFFFF" size={16} />
+          <Text style={styles.deleteButtonText}>Delete Transaction</Text>
+        </Pressable>
 
-        <View className="h-16" />
+        <View style={{ height: 40 }} />
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  content: {
+    padding: 16,
+  },
+  notFoundContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+  notFoundText: {
+    color: '#6B7280',
+    fontSize: 16,
+  },
+  typeSelector: {
+    flexDirection: 'row',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 16,
+  },
+  typeButton: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  typeButtonActive: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  typeText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  typeTextActive: {
+    color: '#111827',
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+    marginBottom: 6,
+  },
+  textInput: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#111827',
+  },
+  notesInput: {
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  amountContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+  },
+  currencySymbol: {
+    fontSize: 16,
+    color: '#6B7280',
+    marginRight: 4,
+  },
+  amountInput: {
+    flex: 1,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#111827',
+  },
+  dateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  dateText: {
+    fontSize: 16,
+    color: '#111827',
+    marginLeft: 10,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  calendarContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    overflow: 'hidden',
+    width: '100%',
+    maxWidth: 360,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  calendarHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  calendarTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  calendarDoneText: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#4F46E5',
+  },
+  categoryList: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  categoryItem: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F9FAFB',
+  },
+  categoryItemActive: {
+    backgroundColor: '#EEF2FF',
+  },
+  categoryName: {
+    fontSize: 14,
+    color: '#374151',
+  },
+  categoryNameActive: {
+    fontWeight: '600',
+    color: '#4F46E5',
+  },
+  categoryGroup: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    marginTop: 2,
+  },
+  saveButton: {
+    backgroundColor: '#4F46E5',
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  saveButtonDisabled: {
+    opacity: 0.5,
+  },
+  saveButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  splitButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 12,
+    paddingVertical: 16,
+    marginTop: 12,
+  },
+  splitButtonText: {
+    color: '#374151',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#DC2626',
+    borderRadius: 12,
+    paddingVertical: 16,
+    marginTop: 12,
+  },
+  deleteButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+});
