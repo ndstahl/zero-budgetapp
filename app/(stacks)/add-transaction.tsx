@@ -1,5 +1,5 @@
 import { View, Text, ScrollView, Pressable, KeyboardAvoidingView, Platform, Alert, StyleSheet, TextInput, Modal } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState, useEffect } from 'react';
 import { Calendar } from 'react-native-calendars';
 import { useTransactions } from '../../src/hooks/useTransactions';
@@ -8,10 +8,15 @@ import type { TransactionType } from '../../src/types/transaction';
 import { Calendar as CalendarIcon } from 'lucide-react-native';
 
 export default function AddTransactionScreen() {
+  const { type: initialType } = useLocalSearchParams<{ type?: string }>();
+
+  // If a type is passed, lock to that type and hide the toggle
+  const lockedType = initialType === 'income' || initialType === 'expense' ? initialType : null;
+
   const [amount, setAmount] = useState('');
   const [merchantName, setMerchantName] = useState('');
   const [description, setDescription] = useState('');
-  const [type, setType] = useState<TransactionType>('expense');
+  const [type, setType] = useState<TransactionType>(lockedType ?? 'expense');
   const [date, setDate] = useState(new Date());
   const [selectedLineItemId, setSelectedLineItemId] = useState<string | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -94,25 +99,27 @@ export default function AddTransactionScreen() {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Type Selector */}
-        <View style={styles.typeSelector}>
-          <Pressable
-            onPress={() => setType('expense')}
-            style={[styles.typeButton, type === 'expense' && styles.typeButtonActive]}
-          >
-            <Text style={[styles.typeText, type === 'expense' && styles.typeTextActive]}>
-              Expense
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={() => setType('income')}
-            style={[styles.typeButton, type === 'income' && styles.typeButtonActive]}
-          >
-            <Text style={[styles.typeText, type === 'income' && styles.typeTextActive]}>
-              Income
-            </Text>
-          </Pressable>
-        </View>
+        {/* Type Selector - only show if type is not locked */}
+        {!lockedType && (
+          <View style={styles.typeSelector}>
+            <Pressable
+              onPress={() => setType('expense')}
+              style={[styles.typeButton, type === 'expense' && styles.typeButtonActive]}
+            >
+              <Text style={[styles.typeText, type === 'expense' && styles.typeTextActive]}>
+                Expense
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setType('income')}
+              style={[styles.typeButton, type === 'income' && styles.typeButtonActive]}
+            >
+              <Text style={[styles.typeText, type === 'income' && styles.typeTextActive]}>
+                Income
+              </Text>
+            </Pressable>
+          </View>
+        )}
 
         {/* Amount */}
         <View style={styles.inputGroup}>

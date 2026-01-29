@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, Pressable, StyleSheet, Modal, FlatList } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useState } from 'react';
@@ -9,7 +9,7 @@ import { useUIStore } from '../../src/stores/uiStore';
 import { useResolvedTheme } from '../../src/components/ThemeProvider';
 import { TransactionCard } from '../../src/components/transactions/TransactionCard';
 import { ProgressBar } from '../../src/components/ui/ProgressBar';
-import { formatCurrency, formatPercent, getMonthName } from '../../src/utils/formatters';
+import { formatCurrency, formatPercent, getMonthName, formatDate } from '../../src/utils/formatters';
 import { Plus, ChevronRight, TrendingUp, TrendingDown, Wallet, X } from 'lucide-react-native';
 
 export default function DashboardScreen() {
@@ -22,12 +22,14 @@ export default function DashboardScreen() {
   const { transactions } = useTransactions({ limit: 5 });
 
   const [showIncomeModal, setShowIncomeModal] = useState(false);
+  const [showSpentModal, setShowSpentModal] = useState(false);
 
   const firstName = profile?.full_name?.split(' ')[0] ?? 'there';
   const summary = budget?.summary;
 
-  // Get income transactions for the modal
+  // Get transactions by type for modals
   const incomeTransactions = transactions.filter(t => t.type === 'income');
+  const expenseTransactions = transactions.filter(t => t.type === 'expense');
 
   // Calculate spending as percentage of income (more intuitive than % of budget)
   const spentPercent = summary && summary.actual_income > 0
@@ -80,7 +82,7 @@ export default function DashboardScreen() {
 
               {/* Spent Row */}
               <Pressable
-                onPress={() => router.push('/(tabs)/transactions')}
+                onPress={() => setShowSpentModal(true)}
                 style={({ pressed }) => [styles.statRow, pressed && styles.statRowPressed]}
               >
                 <View style={styles.statLeft}>
@@ -89,7 +91,7 @@ export default function DashboardScreen() {
                   </View>
                   <View>
                     <Text style={styles.statLabel}>Spent</Text>
-                    <Text style={styles.statHint}>Tap to view transactions</Text>
+                    <Text style={styles.statHint}>Tap to view & edit</Text>
                   </View>
                 </View>
                 <View style={styles.statRight}>
@@ -144,8 +146,10 @@ export default function DashboardScreen() {
             onPress={() => router.push('/(stacks)/add-transaction')}
             style={({ pressed }) => [styles.addButton, pressed && styles.addButtonPressed]}
           >
-            <Plus color="#FFFFFF" size={20} />
-            <Text style={styles.addButtonText}>Add Transaction</Text>
+            <View style={styles.addButtonContent}>
+              <Plus color="#FFFFFF" size={20} />
+              <Text style={styles.addButtonText}>Add Transaction</Text>
+            </View>
           </Pressable>
 
           {/* Recent Transactions */}
@@ -215,37 +219,154 @@ export default function DashboardScreen() {
               <Text style={styles.modalEmptyText}>No income recorded yet</Text>
             </View>
           ) : (
-            <FlatList
-              data={incomeTransactions}
-              keyExtractor={(item) => item.id}
-              contentContainerStyle={styles.modalList}
-              ItemSeparatorComponent={() => <View style={styles.modalItemSeparator} />}
-              renderItem={({ item }) => (
-                <TransactionCard
-                  transaction={item}
-                  isDark={isDark}
+            <ScrollView style={styles.modalScrollView} contentContainerStyle={styles.modalList}>
+              {incomeTransactions.map((item, index) => (
+                <Pressable
+                  key={item.id}
                   onPress={() => {
+                    const transactionId = item.id;
                     setShowIncomeModal(false);
-                    router.push({
-                      pathname: '/(stacks)/edit-transaction',
-                      params: { id: item.id },
-                    });
+                    setTimeout(() => {
+                      router.push({
+                        pathname: '/(stacks)/edit-transaction',
+                        params: { id: transactionId },
+                      });
+                    }, 350);
                   }}
-                />
-              )}
-            />
+                  style={({ pressed }) => [
+                    styles.modalIncomeItem,
+                    pressed && styles.modalIncomeItemPressed,
+                  ]}
+                >
+                  <View style={styles.modalIncomeRow}>
+                    <View style={styles.modalIncomeAvatar}>
+                      <Text style={styles.modalIncomeAvatarText}>
+                        {(item.merchant_name ?? item.description ?? '?')[0]?.toUpperCase() ?? '?'}
+                      </Text>
+                    </View>
+                    <View style={styles.modalIncomeMiddle}>
+                      <Text style={styles.modalIncomeName} numberOfLines={1}>
+                        {item.merchant_name ?? item.description ?? 'Income'}
+                      </Text>
+                      <Text style={styles.modalIncomeDate}>
+                        {formatDate(item.date)}
+                        {item.line_item_name && ` • ${item.line_item_name}`}
+                      </Text>
+                    </View>
+                    <Text style={styles.modalIncomeAmount}>
+                      +{formatCurrency(Math.abs(item.amount))}
+                    </Text>
+                  </View>
+                </Pressable>
+              ))}
+            </ScrollView>
           )}
 
           <View style={styles.modalFooter}>
             <Pressable
               onPress={() => {
                 setShowIncomeModal(false);
-                router.push('/(stacks)/add-transaction');
+                setTimeout(() => {
+                  router.push({
+                    pathname: '/(stacks)/add-transaction',
+                    params: { type: 'income' },
+                  });
+                }, 350);
               }}
               style={styles.modalAddButton}
             >
               <Plus color="#FFFFFF" size={20} />
               <Text style={styles.modalAddButtonText}>Add Income</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Spent Modal */}
+      <Modal
+        visible={showSpentModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowSpentModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Expenses</Text>
+            <Pressable onPress={() => setShowSpentModal(false)} style={styles.modalCloseButton}>
+              <X color={isDark ? '#FFFFFF' : '#111827'} size={24} />
+            </Pressable>
+          </View>
+
+          <View style={styles.modalSummaryExpense}>
+            <Text style={styles.modalSummaryLabel}>Total Spent</Text>
+            <Text style={styles.modalSummaryAmountExpense}>
+              {formatCurrency(summary?.total_spent ?? 0)}
+            </Text>
+          </View>
+
+          {expenseTransactions.length === 0 ? (
+            <View style={styles.modalEmpty}>
+              <Text style={styles.modalEmptyText}>No expenses recorded yet</Text>
+            </View>
+          ) : (
+            <ScrollView style={styles.modalScrollView} contentContainerStyle={styles.modalList}>
+              {expenseTransactions.map((item) => (
+                <Pressable
+                  key={item.id}
+                  onPress={() => {
+                    const transactionId = item.id;
+                    setShowSpentModal(false);
+                    setTimeout(() => {
+                      router.push({
+                        pathname: '/(stacks)/edit-transaction',
+                        params: { id: transactionId },
+                      });
+                    }, 350);
+                  }}
+                  style={({ pressed }) => [
+                    styles.modalExpenseItem,
+                    pressed && styles.modalExpenseItemPressed,
+                  ]}
+                >
+                  <View style={styles.modalExpenseRow}>
+                    <View style={styles.modalExpenseAvatar}>
+                      <Text style={styles.modalExpenseAvatarText}>
+                        {(item.merchant_name ?? item.description ?? '?')[0]?.toUpperCase() ?? '?'}
+                      </Text>
+                    </View>
+                    <View style={styles.modalExpenseMiddle}>
+                      <Text style={styles.modalExpenseName} numberOfLines={1}>
+                        {item.merchant_name ?? item.description ?? 'Expense'}
+                      </Text>
+                      <Text style={styles.modalExpenseDate}>
+                        {formatDate(item.date)}
+                        {item.line_item_name && ` • ${item.line_item_name}`}
+                      </Text>
+                    </View>
+                    <Text style={styles.modalExpenseAmount}>
+                      -{formatCurrency(Math.abs(item.amount))}
+                    </Text>
+                  </View>
+                </Pressable>
+              ))}
+            </ScrollView>
+          )}
+
+          <View style={styles.modalFooter}>
+            <Pressable
+              onPress={() => {
+                setShowSpentModal(false);
+                setTimeout(() => {
+                  router.push({
+                    pathname: '/(stacks)/add-transaction',
+                    params: { type: 'expense' },
+                  });
+                }, 350);
+              }}
+              style={styles.modalAddButtonExpense}
+            >
+              <Plus color="#FFFFFF" size={20} />
+              <Text style={styles.modalAddButtonText}>Add Expense</Text>
             </Pressable>
           </View>
         </View>
@@ -286,6 +407,7 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
     backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
     borderRadius: 20,
     padding: 4,
+    marginBottom: 32,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: isDark ? 0.3 : 0.08,
@@ -403,15 +525,24 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
   },
   addButton: {
     backgroundColor: '#4F46E5',
-    borderRadius: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    marginTop: 20,
+    borderRadius: 16,
+    paddingVertical: 18,
+    paddingHorizontal: 24,
+    marginTop: 48,
+    marginBottom: 24,
+    shadowColor: '#4F46E5',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   addButtonPressed: {
     opacity: 0.9,
+  },
+  addButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   addButtonText: {
     color: '#FFFFFF',
@@ -538,5 +669,123 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,
+  },
+  modalScrollView: {
+    flex: 1,
+  },
+  modalIncomeItem: {
+    backgroundColor: isDark ? '#283548' : '#F5F6F8',
+    borderRadius: 14,
+    marginBottom: 10,
+  },
+  modalIncomeItemPressed: {
+    backgroundColor: isDark ? '#374151' : '#EBEDF0',
+  },
+  modalIncomeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
+  modalIncomeAvatar: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: isDark ? '#064E3B' : '#D1FAE5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+  },
+  modalIncomeAvatarText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#10B981',
+  },
+  modalIncomeMiddle: {
+    flex: 1,
+    marginRight: 12,
+  },
+  modalIncomeName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: isDark ? '#FFFFFF' : '#111827',
+    marginBottom: 4,
+  },
+  modalIncomeDate: {
+    fontSize: 13,
+    color: isDark ? '#9CA3AF' : '#6B7280',
+  },
+  modalIncomeAmount: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#10B981',
+  },
+  // Expense modal styles
+  modalSummaryExpense: {
+    backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: isDark ? '#374151' : '#E5E7EB',
+  },
+  modalSummaryAmountExpense: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: isDark ? '#FFFFFF' : '#111827',
+  },
+  modalExpenseItem: {
+    backgroundColor: isDark ? '#283548' : '#F5F6F8',
+    borderRadius: 14,
+    marginBottom: 10,
+  },
+  modalExpenseItemPressed: {
+    backgroundColor: isDark ? '#374151' : '#EBEDF0',
+  },
+  modalExpenseRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
+  modalExpenseAvatar: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: isDark ? '#374151' : '#E5E7EB',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+  },
+  modalExpenseAvatarText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: isDark ? '#9CA3AF' : '#6B7280',
+  },
+  modalExpenseMiddle: {
+    flex: 1,
+    marginRight: 12,
+  },
+  modalExpenseName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: isDark ? '#FFFFFF' : '#111827',
+    marginBottom: 4,
+  },
+  modalExpenseDate: {
+    fontSize: 13,
+    color: isDark ? '#9CA3AF' : '#6B7280',
+  },
+  modalExpenseAmount: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: isDark ? '#FFFFFF' : '#111827',
+  },
+  modalAddButtonExpense: {
+    backgroundColor: '#4F46E5',
+    borderRadius: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
   },
 });

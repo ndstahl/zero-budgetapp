@@ -134,13 +134,6 @@ export default function EditTransactionScreen() {
     return d.toISOString().split('T')[0];
   };
 
-  // Reset line item when type changes
-  useEffect(() => {
-    if (transaction && type !== transaction.type) {
-      setSelectedLineItemId(null);
-    }
-  }, [type, transaction]);
-
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -151,26 +144,6 @@ export default function EditTransactionScreen() {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Type Selector */}
-        <View style={styles.typeSelector}>
-          <Pressable
-            onPress={() => setType('expense')}
-            style={[styles.typeButton, type === 'expense' && styles.typeButtonActive]}
-          >
-            <Text style={[styles.typeText, type === 'expense' && styles.typeTextActive]}>
-              Expense
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={() => setType('income')}
-            style={[styles.typeButton, type === 'income' && styles.typeButtonActive]}
-          >
-            <Text style={[styles.typeText, type === 'income' && styles.typeTextActive]}>
-              Income
-            </Text>
-          </Pressable>
-        </View>
-
         {/* Amount */}
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Amount</Text>
@@ -383,35 +356,6 @@ const styles = StyleSheet.create({
   notFoundText: {
     color: '#6B7280',
     fontSize: 16,
-  },
-  typeSelector: {
-    flexDirection: 'row',
-    backgroundColor: '#F3F4F6',
-    borderRadius: 12,
-    padding: 4,
-    marginBottom: 16,
-  },
-  typeButton: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  typeButtonActive: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  typeText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#6B7280',
-  },
-  typeTextActive: {
-    color: '#111827',
   },
   inputGroup: {
     marginBottom: 16,
