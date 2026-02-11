@@ -1,31 +1,29 @@
-import { View, Text, FlatList, Pressable } from 'react-native';
+import { View, Text, FlatList, Pressable, StyleSheet, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useCallback, useMemo } from 'react';
 import { router } from 'expo-router';
 import { useTransactions } from '../../src/hooks/useTransactions';
 import { useUIStore } from '../../src/stores/uiStore';
-import { getMonthName } from '../../src/utils/formatters';
-import { ChevronLeft, ChevronRight } from 'lucide-react-native';
+import { useResolvedTheme } from '../../src/components/ThemeProvider';
+import { formatCurrency, getMonthName } from '../../src/utils/formatters';
 import { usePlaid } from '../../src/hooks/usePlaid';
-import { TransactionCard } from '../../src/components/transactions/TransactionCard';
-import { EmptyState } from '../../src/components/shared/EmptyState';
-import { LoadingScreen } from '../../src/components/shared/LoadingScreen';
-import { Input } from '../../src/components/ui/Input';
 import Toast from 'react-native-toast-message';
-import { Plus, Search, ArrowLeftRight, RefreshCw, AlertTriangle } from 'lucide-react-native';
+import { Plus, Search, RefreshCw, ChevronDown, CheckCircle } from 'lucide-react-native';
 import type { Transaction, TransactionType } from '../../src/types/transaction';
 
 type FilterType = 'all' | TransactionType | 'uncategorized';
 
 export default function TransactionsScreen() {
+  const resolvedTheme = useResolvedTheme();
+  const isDark = resolvedTheme === 'dark';
+
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const { selectedMonth, selectedYear, goToPreviousMonth, goToNextMonth } = useUIStore();
 
-  // Calculate date range for selected month
   const dateFilters = useMemo(() => {
     const startDate = new Date(selectedYear, selectedMonth - 1, 1);
-    const endDate = new Date(selectedYear, selectedMonth, 0); // Last day of month
+    const endDate = new Date(selectedYear, selectedMonth, 0);
     return {
       date_from: startDate.toISOString().split('T')[0],
       date_to: endDate.toISOString().split('T')[0],
@@ -43,13 +41,11 @@ export default function TransactionsScreen() {
   };
 
   const { transactions, isLoading, refetch } = useTransactions(filters);
-  const { activeItems, errorItems, isSyncing, syncTransactions } = usePlaid();
+  const { activeItems, isSyncing, syncTransactions } = usePlaid();
 
   const hasLinkedAccounts = activeItems.length > 0;
-  const hasErrors = errorItems.length > 0;
 
   const handleRefresh = useCallback(async () => {
-    // If user has linked accounts, sync Plaid first, then refetch
     if (hasLinkedAccounts) {
       try {
         await syncTransactions(undefined);
@@ -68,140 +64,414 @@ export default function TransactionsScreen() {
     { key: 'all', label: 'All' },
     { key: 'expense', label: 'Expenses' },
     { key: 'income', label: 'Income' },
-    { key: 'uncategorized', label: 'Uncategorized' },
+    { key: 'uncategorized', label: 'Review' },
   ];
 
-  const handlePressTransaction = (tx: Transaction) => {
-    router.push({
-      pathname: '/(stacks)/edit-transaction',
-      params: { id: tx.id },
-    });
+  const styles = createStyles(isDark);
+
+  // Format date to show just month/day
+  const formatShortDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return `${date.getMonth() + 1}/${date.getDate()}`;
   };
 
-  const renderTransaction = ({ item }: { item: Transaction }) => (
-    <TransactionCard
-      transaction={item}
-      onPress={() => handlePressTransaction(item)}
-    />
-  );
+  // Render transaction card in grid style
+  const renderTransactionCard = ({ item, index }: { item: Transaction; index: number }) => {
+    const isIncome = item.type === 'income';
+    const initial = (item.merchant_name || item.description || '?')[0].toUpperCase();
+
+    return (
+      <Pressable
+        onPress={() => router.push({ pathname: '/(stacks)/edit-transaction', params: { id: item.id } })}
+        style={({ pressed }) => [
+          styles.transactionCard,
+          index % 2 === 0 ? styles.cardLeft : styles.cardRight,
+          pressed && styles.cardPressed,
+        ]}
+      >
+        {/* Merchant Initial */}
+        <View style={[styles.merchantIcon, isIncome && styles.merchantIconIncome]}>
+          <Text style={[styles.merchantInitial, isIncome && styles.merchantInitialIncome]}>
+            {initial}
+          </Text>
+        </View>
+
+        {/* Amount */}
+        <Text style={[styles.transactionAmount, isIncome && styles.incomeAmount]} numberOfLines={1}>
+          {isIncome ? '+' : ''}{formatCurrency(Math.abs(item.amount))}
+        </Text>
+
+        {/* Merchant Name */}
+        <Text style={styles.merchantName} numberOfLines={1}>
+          {item.merchant_name || item.description || 'Transaction'}
+        </Text>
+
+        {/* Date */}
+        <Text style={styles.transactionDate}>
+          {formatShortDate(item.date)}
+        </Text>
+      </Pressable>
+    );
+  };
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
-      <View className="bg-white dark:bg-gray-800 px-4 pb-3 pt-2">
-        <View className="mb-2 flex-row items-center justify-between">
-          <Text className="text-2xl font-bold text-gray-900 dark:text-white">Transactions</Text>
-          <View className="flex-row items-center">
-            {hasLinkedAccounts && (
-              <Pressable
-                onPress={() => syncTransactions(undefined)}
-                disabled={isSyncing}
-                className="mr-2 h-10 w-10 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700"
-              >
-                <RefreshCw color={isSyncing ? '#9CA3AF' : '#4F46E5'} size={18} />
-              </Pressable>
-            )}
-            <Pressable
-              onPress={() => router.push('/(stacks)/add-transaction')}
-              className="h-10 w-10 items-center justify-center rounded-full bg-brand-500"
-            >
-              <Plus color="#FFFFFF" size={20} />
-            </Pressable>
+      <View style={styles.header}>
+        {/* Search Bar Row */}
+        <View style={styles.searchRow}>
+          <View style={styles.searchContainer}>
+            <Search color="#9CA3AF" size={18} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search Transactions"
+              placeholderTextColor="#9CA3AF"
+              value={search}
+              onChangeText={setSearch}
+            />
           </View>
+
+          {/* Review Button (for uncategorized) */}
+          <Pressable
+            onPress={() => setActiveFilter(activeFilter === 'uncategorized' ? 'all' : 'uncategorized')}
+            style={[
+              styles.reviewButton,
+              activeFilter === 'uncategorized' && styles.reviewButtonActive,
+            ]}
+          >
+            <CheckCircle
+              color={activeFilter === 'uncategorized' ? '#FFFFFF' : '#10B981'}
+              size={16}
+            />
+            <Text style={[
+              styles.reviewButtonText,
+              activeFilter === 'uncategorized' && styles.reviewButtonTextActive,
+            ]}>
+              Review
+            </Text>
+          </Pressable>
         </View>
 
         {/* Month Selector */}
-        <View className="mb-3 flex-row items-center justify-center">
-          <Pressable
-            onPress={goToPreviousMonth}
-            className="rounded-full p-2 active:bg-gray-100 dark:active:bg-gray-700"
-          >
-            <ChevronLeft color="#9CA3AF" size={24} />
+        <View style={styles.filtersRow}>
+          <Pressable style={styles.monthSelector}>
+            <Text style={styles.monthText}>
+              {getMonthName(selectedMonth)} {selectedYear}
+            </Text>
+            <ChevronDown color={isDark ? '#9CA3AF' : '#6B7280'} size={16} />
           </Pressable>
-          <Text className="mx-4 text-base font-semibold text-gray-900 dark:text-white">
-            {getMonthName(selectedMonth)} {selectedYear}
-          </Text>
-          <Pressable
-            onPress={goToNextMonth}
-            className="rounded-full p-2 active:bg-gray-100 dark:active:bg-gray-700"
-          >
-            <ChevronRight color="#9CA3AF" size={24} />
-          </Pressable>
+
+          {/* Filter Pills */}
+          <View style={styles.filterPills}>
+            {filterOptions.slice(0, 3).map(({ key, label }) => (
+              <Pressable
+                key={key}
+                onPress={() => setActiveFilter(key)}
+                style={[
+                  styles.filterPill,
+                  activeFilter === key && styles.filterPillActive,
+                ]}
+              >
+                <Text style={[
+                  styles.filterPillText,
+                  activeFilter === key && styles.filterPillTextActive,
+                ]}>
+                  {label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
         </View>
 
-        {/* Sync Status Banner */}
+        {/* Syncing indicator */}
         {isSyncing && (
-          <View className="mb-2 flex-row items-center rounded-lg bg-brand-50 dark:bg-brand-900/30 px-3 py-2">
+          <View style={styles.syncBanner}>
             <RefreshCw color="#4F46E5" size={14} />
-            <Text className="ml-2 text-sm text-brand-600 dark:text-brand-400">Syncing transactions...</Text>
+            <Text style={styles.syncText}>Syncing transactions...</Text>
           </View>
         )}
-        {hasErrors && !isSyncing && (
-          <Pressable
-            onPress={() => router.push('/(stacks)/linked-accounts')}
-            className="mb-2 flex-row items-center rounded-lg bg-warning-50 dark:bg-warning-500/20 px-3 py-2"
-          >
-            <AlertTriangle color="#F59E0B" size={14} />
-            <Text className="ml-2 flex-1 text-sm text-warning-700 dark:text-warning-500">
-              {errorItems.length} account{errorItems.length !== 1 ? 's' : ''} need
-              attention
-            </Text>
-            <Text className="text-xs font-medium text-warning-600 dark:text-warning-500">Fix</Text>
-          </Pressable>
-        )}
-
-        {/* Search */}
-        <Input
-          placeholder="Search transactions..."
-          value={search}
-          onChangeText={setSearch}
-          leftIcon={<Search color="#9CA3AF" size={18} />}
-        />
-
-        {/* Filter Chips */}
-        <View className="mt-3 flex-row">
-          {filterOptions.map(({ key, label }) => (
-            <Pressable
-              key={key}
-              onPress={() => setActiveFilter(key)}
-              className={`mr-2 rounded-full px-3 py-1.5 ${
-                activeFilter === key ? 'bg-brand-500' : 'bg-gray-100 dark:bg-gray-700'
-              }`}
-            >
-              <Text
-                className={`text-sm font-medium ${
-                  activeFilter === key ? 'text-white' : 'text-gray-600 dark:text-gray-300'
-                }`}
-              >
-                {label}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
       </View>
 
-      {/* Transaction List */}
-      {isLoading ? (
-        <LoadingScreen />
-      ) : transactions.length === 0 ? (
-        <EmptyState
-          title="No Transactions"
-          description="Add your first transaction to start tracking your spending."
-          icon={<ArrowLeftRight color="#4F46E5" size={48} />}
-          actionTitle="Add Transaction"
-          onAction={() => router.push('/(stacks)/add-transaction')}
-        />
+      {/* Transaction Grid */}
+      {transactions.length === 0 && !isLoading ? (
+        <View style={styles.emptyState}>
+          <View style={styles.emptyIcon}>
+            <Plus color="#4F46E5" size={32} />
+          </View>
+          <Text style={styles.emptyTitle}>No Transactions</Text>
+          <Text style={styles.emptyText}>
+            Add your first transaction to start tracking
+          </Text>
+          <Pressable
+            onPress={() => router.push('/(stacks)/add-transaction')}
+            style={styles.emptyButton}
+          >
+            <Text style={styles.emptyButtonText}>Add Transaction</Text>
+          </Pressable>
+        </View>
       ) : (
         <FlatList
           data={transactions}
           keyExtractor={(item) => item.id}
-          renderItem={renderTransaction}
+          renderItem={renderTransactionCard}
+          numColumns={2}
           onRefresh={handleRefresh}
           refreshing={isLoading || isSyncing}
-          ItemSeparatorComponent={() => <View className="h-px bg-gray-100 dark:bg-gray-700" />}
-          contentContainerStyle={{ paddingBottom: 100 }}
+          contentContainerStyle={styles.gridContainer}
+          columnWrapperStyle={styles.gridRow}
+          showsVerticalScrollIndicator={false}
         />
       )}
+
+      {/* FAB */}
+      <Pressable
+        onPress={() => router.push('/(stacks)/add-transaction')}
+        style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}
+      >
+        <Plus color="#FFFFFF" size={24} />
+      </Pressable>
     </SafeAreaView>
   );
 }
+
+const createStyles = (isDark: boolean) => StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: isDark ? '#0F172A' : '#FAF9F6',
+  },
+  header: {
+    backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 16,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: isDark ? 0.3 : 0.06,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 14,
+  },
+  searchContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: isDark ? '#374151' : '#F3F4F6',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    height: 44,
+    gap: 10,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    color: isDark ? '#FFFFFF' : '#111827',
+  },
+  reviewButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: isDark ? '#064E3B' : '#D1FAE5',
+    paddingHorizontal: 14,
+    height: 44,
+    borderRadius: 12,
+    gap: 6,
+  },
+  reviewButtonActive: {
+    backgroundColor: '#10B981',
+  },
+  reviewButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#10B981',
+  },
+  reviewButtonTextActive: {
+    color: '#FFFFFF',
+  },
+  filtersRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  monthSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  monthText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: isDark ? '#FFFFFF' : '#111827',
+  },
+  filterPills: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  filterPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: isDark ? '#374151' : '#F3F4F6',
+  },
+  filterPillActive: {
+    backgroundColor: '#4F46E5',
+  },
+  filterPillText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: isDark ? '#D1D5DB' : '#6B7280',
+  },
+  filterPillTextActive: {
+    color: '#FFFFFF',
+  },
+  syncBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: isDark ? 'rgba(79, 70, 229, 0.2)' : '#EEF2FF',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    marginTop: 12,
+    gap: 8,
+  },
+  syncText: {
+    fontSize: 13,
+    color: '#4F46E5',
+    fontWeight: '500',
+  },
+  gridContainer: {
+    padding: 12,
+    paddingBottom: 100,
+  },
+  gridRow: {
+    justifyContent: 'space-between',
+  },
+  transactionCard: {
+    width: '48%',
+    backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: isDark ? 0.3 : 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  cardLeft: {
+    marginRight: 6,
+  },
+  cardRight: {
+    marginLeft: 6,
+  },
+  cardPressed: {
+    opacity: 0.9,
+    transform: [{ scale: 0.98 }],
+  },
+  merchantIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: isDark ? '#374151' : '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  merchantIconIncome: {
+    backgroundColor: isDark ? '#064E3B' : '#D1FAE5',
+  },
+  merchantInitial: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: isDark ? '#9CA3AF' : '#6B7280',
+  },
+  merchantInitialIncome: {
+    color: '#10B981',
+  },
+  transactionAmount: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: isDark ? '#FFFFFF' : '#111827',
+    marginBottom: 4,
+  },
+  incomeAmount: {
+    color: '#10B981',
+  },
+  merchantName: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: isDark ? '#D1D5DB' : '#6B7280',
+    marginBottom: 2,
+  },
+  transactionDate: {
+    fontSize: 12,
+    color: '#9CA3AF',
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+  },
+  emptyIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 24,
+    backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: isDark ? '#FFFFFF' : '#111827',
+    marginBottom: 8,
+  },
+  emptyText: {
+    fontSize: 15,
+    color: '#9CA3AF',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  emptyButton: {
+    backgroundColor: '#4F46E5',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  emptyButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  fab: {
+    position: 'absolute',
+    bottom: 90,
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: '#4F46E5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#4F46E5',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  fabPressed: {
+    transform: [{ scale: 0.95 }],
+  },
+});
