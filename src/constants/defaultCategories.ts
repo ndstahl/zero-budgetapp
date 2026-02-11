@@ -9,8 +9,10 @@ export const DEFAULT_CATEGORY_GROUPS: DefaultCategoryGroup[] = [
     name: 'Income',
     isIncome: true,
     lineItems: [
-      { name: 'Paycheck 1', plannedAmount: 0 },
-      { name: 'Paycheck 2', plannedAmount: 0 },
+      { name: 'Salary/Wages', plannedAmount: 0 },
+      { name: 'Side Hustle', plannedAmount: 0 },
+      { name: 'Bonus', plannedAmount: 0 },
+      { name: 'Other Income', plannedAmount: 0 },
     ],
   },
   {

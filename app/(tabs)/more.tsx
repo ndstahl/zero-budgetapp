@@ -35,7 +35,13 @@ export default function MoreScreen() {
         text: 'Sign Out',
         style: 'destructive',
         onPress: async () => {
-          await authService.signOut();
+          try {
+            await authService.signOut();
+            useAuthStore.getState().reset();
+            router.replace('/(auth)/welcome');
+          } catch (error) {
+            Alert.alert('Error', 'Failed to sign out. Please try again.');
+          }
         },
       },
     ]);

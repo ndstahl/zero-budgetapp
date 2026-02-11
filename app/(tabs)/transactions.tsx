@@ -1,8 +1,11 @@
 import { View, Text, FlatList, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { router } from 'expo-router';
 import { useTransactions } from '../../src/hooks/useTransactions';
+import { useUIStore } from '../../src/stores/uiStore';
+import { getMonthName } from '../../src/utils/formatters';
+import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { usePlaid } from '../../src/hooks/usePlaid';
 import { TransactionCard } from '../../src/components/transactions/TransactionCard';
 import { EmptyState } from '../../src/components/shared/EmptyState';
@@ -17,8 +20,20 @@ type FilterType = 'all' | TransactionType | 'uncategorized';
 export default function TransactionsScreen() {
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
+  const { selectedMonth, selectedYear, goToPreviousMonth, goToNextMonth } = useUIStore();
+
+  // Calculate date range for selected month
+  const dateFilters = useMemo(() => {
+    const startDate = new Date(selectedYear, selectedMonth - 1, 1);
+    const endDate = new Date(selectedYear, selectedMonth, 0); // Last day of month
+    return {
+      date_from: startDate.toISOString().split('T')[0],
+      date_to: endDate.toISOString().split('T')[0],
+    };
+  }, [selectedMonth, selectedYear]);
 
   const filters = {
+    ...dateFilters,
     search: search || undefined,
     type: activeFilter !== 'all' && activeFilter !== 'uncategorized'
       ? (activeFilter as TransactionType)
@@ -74,7 +89,7 @@ export default function TransactionsScreen() {
     <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
       {/* Header */}
       <View className="bg-white dark:bg-gray-800 px-4 pb-3 pt-2">
-        <View className="mb-3 flex-row items-center justify-between">
+        <View className="mb-2 flex-row items-center justify-between">
           <Text className="text-2xl font-bold text-gray-900 dark:text-white">Transactions</Text>
           <View className="flex-row items-center">
             {hasLinkedAccounts && (
@@ -93,6 +108,25 @@ export default function TransactionsScreen() {
               <Plus color="#FFFFFF" size={20} />
             </Pressable>
           </View>
+        </View>
+
+        {/* Month Selector */}
+        <View className="mb-3 flex-row items-center justify-center">
+          <Pressable
+            onPress={goToPreviousMonth}
+            className="rounded-full p-2 active:bg-gray-100 dark:active:bg-gray-700"
+          >
+            <ChevronLeft color="#9CA3AF" size={24} />
+          </Pressable>
+          <Text className="mx-4 text-base font-semibold text-gray-900 dark:text-white">
+            {getMonthName(selectedMonth)} {selectedYear}
+          </Text>
+          <Pressable
+            onPress={goToNextMonth}
+            className="rounded-full p-2 active:bg-gray-100 dark:active:bg-gray-700"
+          >
+            <ChevronRight color="#9CA3AF" size={24} />
+          </Pressable>
         </View>
 
         {/* Sync Status Banner */}

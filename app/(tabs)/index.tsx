@@ -1,7 +1,7 @@
 import { View, Text, ScrollView, Pressable, StyleSheet, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useBudget } from '../../src/hooks/useBudget';
 import { useTransactions } from '../../src/hooks/useTransactions';
 import { useAuthStore } from '../../src/stores/authStore';
@@ -10,16 +10,28 @@ import { useResolvedTheme } from '../../src/components/ThemeProvider';
 import { TransactionCard } from '../../src/components/transactions/TransactionCard';
 import { ProgressBar } from '../../src/components/ui/ProgressBar';
 import { formatCurrency, formatPercent, getMonthName, formatDate } from '../../src/utils/formatters';
-import { Plus, ChevronRight, TrendingUp, TrendingDown, Wallet, X } from 'lucide-react-native';
+import { Plus, ChevronRight, ChevronLeft, TrendingUp, TrendingDown, Wallet, X } from 'lucide-react-native';
 
 export default function DashboardScreen() {
   const resolvedTheme = useResolvedTheme();
   const isDark = resolvedTheme === 'dark';
 
   const profile = useAuthStore((s) => s.profile);
-  const { selectedMonth, selectedYear } = useUIStore();
+  const { selectedMonth, selectedYear, goToPreviousMonth, goToNextMonth } = useUIStore();
   const { budget } = useBudget();
-  const { transactions } = useTransactions({ limit: 5 });
+
+  // Calculate date range for selected month
+  const dateFilters = useMemo(() => {
+    const startDate = new Date(selectedYear, selectedMonth - 1, 1);
+    const endDate = new Date(selectedYear, selectedMonth, 0); // Last day of month
+    return {
+      date_from: startDate.toISOString().split('T')[0],
+      date_to: endDate.toISOString().split('T')[0],
+      limit: 5,
+    };
+  }, [selectedMonth, selectedYear]);
+
+  const { transactions } = useTransactions(dateFilters);
 
   const [showIncomeModal, setShowIncomeModal] = useState(false);
   const [showSpentModal, setShowSpentModal] = useState(false);
@@ -47,9 +59,23 @@ export default function DashboardScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.greeting}>Hello, {firstName}</Text>
-          <Text style={styles.monthTitle}>
-            {getMonthName(selectedMonth)} {selectedYear}
-          </Text>
+          <View style={styles.monthSelector}>
+            <Pressable
+              onPress={goToPreviousMonth}
+              style={({ pressed }) => [styles.monthArrow, pressed && styles.monthArrowPressed]}
+            >
+              <ChevronLeft color={isDark ? '#9CA3AF' : '#6B7280'} size={28} />
+            </Pressable>
+            <Text style={styles.monthTitle}>
+              {getMonthName(selectedMonth)} {selectedYear}
+            </Text>
+            <Pressable
+              onPress={goToNextMonth}
+              style={({ pressed }) => [styles.monthArrow, pressed && styles.monthArrowPressed]}
+            >
+              <ChevronRight color={isDark ? '#9CA3AF' : '#6B7280'} size={28} />
+            </Pressable>
+          </View>
         </View>
 
         <View style={styles.content}>
@@ -393,11 +419,23 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
     fontSize: 16,
     color: isDark ? '#9CA3AF' : '#6B7280',
   },
+  monthSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  monthArrow: {
+    padding: 4,
+    borderRadius: 20,
+  },
+  monthArrowPressed: {
+    backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+  },
   monthTitle: {
     fontSize: 24,
     fontWeight: '700',
     color: isDark ? '#FFFFFF' : '#111827',
-    marginTop: 4,
+    marginHorizontal: 12,
   },
   content: {
     paddingHorizontal: 16,

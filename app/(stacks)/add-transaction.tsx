@@ -5,7 +5,7 @@ import { Calendar } from 'react-native-calendars';
 import { useTransactions } from '../../src/hooks/useTransactions';
 import { useBudget } from '../../src/hooks/useBudget';
 import type { TransactionType } from '../../src/types/transaction';
-import { Calendar as CalendarIcon } from 'lucide-react-native';
+import { Calendar as CalendarIcon, Plus } from 'lucide-react-native';
 
 export default function AddTransactionScreen() {
   const { type: initialType } = useLocalSearchParams<{ type?: string }>();
@@ -20,14 +20,22 @@ export default function AddTransactionScreen() {
   const [date, setDate] = useState(new Date());
   const [selectedLineItemId, setSelectedLineItemId] = useState<string | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showNewSourceModal, setShowNewSourceModal] = useState(false);
+  const [newSourceName, setNewSourceName] = useState('');
 
   const { createTransaction, isCreating } = useTransactions();
-  const { budget } = useBudget();
+  const { budget, addLineItem } = useBudget();
 
   const handleSave = () => {
     const amountCents = Math.round(parseFloat(amount || '0') * 100);
     if (amountCents === 0) {
       Alert.alert('Amount required', 'Enter a transaction amount');
+      return;
+    }
+
+    // Require income source for income transactions
+    if (type === 'income' && !selectedLineItemId) {
+      Alert.alert('Income Source Required', 'Please select or create an income source for this transaction');
       return;
     }
 
@@ -79,6 +87,9 @@ export default function AddTransactionScreen() {
     setSelectedLineItemId(null);
   }, [type]);
 
+  // Get the income category group for adding new sources
+  const incomeGroup = budget?.category_groups?.find((g) => g.is_income);
+
   // Get line items for category picker based on transaction type
   const lineItems = budget?.category_groups
     ?.filter((g) => (type === 'income' ? g.is_income : !g.is_income))
@@ -88,6 +99,35 @@ export default function AddTransactionScreen() {
         groupName: g.name,
       }))
     ) ?? [];
+
+  const handleAddNewSource = () => {
+    if (!newSourceName.trim()) {
+      Alert.alert('Name required', 'Please enter a name for the income source');
+      return;
+    }
+    if (!incomeGroup) {
+      Alert.alert('Error', 'No income category found. Please create a budget first.');
+      return;
+    }
+
+    addLineItem(
+      {
+        categoryGroupId: incomeGroup.id,
+        name: newSourceName.trim(),
+        plannedAmount: 0,
+      },
+      {
+        onSuccess: (newItem: any) => {
+          setSelectedLineItemId(newItem.id);
+          setNewSourceName('');
+          setShowNewSourceModal(false);
+        },
+        onError: (err: Error) => {
+          Alert.alert('Error', err.message);
+        },
+      }
+    );
+  };
 
   return (
     <KeyboardAvoidingView
@@ -222,11 +262,11 @@ export default function AddTransactionScreen() {
         </Modal>
 
         {/* Category Picker */}
-        {lineItems.length > 0 && (
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>
-              {type === 'income' ? 'Income Source' : 'Category'}
-            </Text>
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>
+            {type === 'income' ? 'Income Source (Required)' : 'Category'}
+          </Text>
+          {lineItems.length > 0 ? (
             <View style={styles.categoryList}>
               {lineItems.map((item) => (
                 <Pressable
@@ -252,9 +292,73 @@ export default function AddTransactionScreen() {
                   <Text style={styles.categoryGroup}>{item.groupName}</Text>
                 </Pressable>
               ))}
+              {type === 'income' && (
+                <Pressable
+                  onPress={() => setShowNewSourceModal(true)}
+                  style={styles.addNewSourceButton}
+                >
+                  <Plus color="#4F46E5" size={18} />
+                  <Text style={styles.addNewSourceText}>Add New Income Source</Text>
+                </Pressable>
+              )}
             </View>
-          </View>
-        )}
+          ) : type === 'income' ? (
+            <View style={styles.categoryList}>
+              <Pressable
+                onPress={() => setShowNewSourceModal(true)}
+                style={styles.addNewSourceButton}
+              >
+                <Plus color="#4F46E5" size={18} />
+                <Text style={styles.addNewSourceText}>Add New Income Source</Text>
+              </Pressable>
+            </View>
+          ) : null}
+        </View>
+
+        {/* New Income Source Modal */}
+        <Modal
+          visible={showNewSourceModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowNewSourceModal(false)}
+        >
+          <Pressable
+            style={styles.modalOverlay}
+            onPress={() => setShowNewSourceModal(false)}
+          >
+            <Pressable style={styles.newSourceContainer}>
+              <Text style={styles.newSourceTitle}>New Income Source</Text>
+              <Text style={styles.newSourceDescription}>
+                Enter a name for this income source (e.g., "Freelance", "Rental Income")
+              </Text>
+              <TextInput
+                style={styles.newSourceInput}
+                value={newSourceName}
+                onChangeText={setNewSourceName}
+                placeholder="Income source name"
+                placeholderTextColor="#9CA3AF"
+                autoFocus
+              />
+              <View style={styles.newSourceButtons}>
+                <Pressable
+                  onPress={() => {
+                    setNewSourceName('');
+                    setShowNewSourceModal(false);
+                  }}
+                  style={styles.newSourceCancelButton}
+                >
+                  <Text style={styles.newSourceCancelText}>Cancel</Text>
+                </Pressable>
+                <Pressable
+                  onPress={handleAddNewSource}
+                  style={styles.newSourceSaveButton}
+                >
+                  <Text style={styles.newSourceSaveText}>Add</Text>
+                </Pressable>
+              </View>
+            </Pressable>
+          </Pressable>
+        </Modal>
 
         {/* Save Button */}
         <Pressable
@@ -446,5 +550,81 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  addNewSourceButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  addNewSourceText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#4F46E5',
+    marginLeft: 8,
+  },
+  newSourceContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 340,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  newSourceTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 8,
+  },
+  newSourceDescription: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 20,
+  },
+  newSourceInput: {
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: '#111827',
+    marginBottom: 20,
+  },
+  newSourceButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  newSourceCancelButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+  },
+  newSourceCancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  newSourceSaveButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: '#4F46E5',
+    alignItems: 'center',
+  },
+  newSourceSaveText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });
