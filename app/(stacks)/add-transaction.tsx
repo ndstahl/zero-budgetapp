@@ -5,7 +5,38 @@ import { Calendar } from 'react-native-calendars';
 import { useTransactions } from '../../src/hooks/useTransactions';
 import { useBudget } from '../../src/hooks/useBudget';
 import type { TransactionType } from '../../src/types/transaction';
-import { Calendar as CalendarIcon, Plus } from 'lucide-react-native';
+import {
+  Calendar as CalendarIcon,
+  Plus,
+  ChevronRight,
+  ChevronDown,
+  Check,
+  Home,
+  Car,
+  Utensils,
+  User,
+  Heart,
+  CreditCard,
+  PiggyBank,
+  Gift,
+  X,
+  Tag,
+} from 'lucide-react-native';
+
+// Map category group names to icons
+const getCategoryIcon = (groupName: string, color: string, size: number = 20) => {
+  const icons: Record<string, React.ReactNode> = {
+    'Housing': <Home color={color} size={size} />,
+    'Transportation': <Car color={color} size={size} />,
+    'Food': <Utensils color={color} size={size} />,
+    'Personal': <User color={color} size={size} />,
+    'Insurance & Health': <Heart color={color} size={size} />,
+    'Debt': <CreditCard color={color} size={size} />,
+    'Savings': <PiggyBank color={color} size={size} />,
+    'Giving': <Gift color={color} size={size} />,
+  };
+  return icons[groupName] || <Tag color={color} size={size} />;
+};
 
 export default function AddTransactionScreen() {
   const { type: initialType } = useLocalSearchParams<{ type?: string }>();
@@ -20,6 +51,8 @@ export default function AddTransactionScreen() {
   const [date, setDate] = useState(new Date());
   const [selectedLineItemId, setSelectedLineItemId] = useState<string | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [showNewSourceModal, setShowNewSourceModal] = useState(false);
   const [newSourceName, setNewSourceName] = useState('');
 
@@ -90,6 +123,10 @@ export default function AddTransactionScreen() {
   // Get the income category group for adding new sources
   const incomeGroup = budget?.category_groups?.find((g) => g.is_income);
 
+  // Get category groups for the picker based on transaction type
+  const categoryGroups = budget?.category_groups
+    ?.filter((g) => (type === 'income' ? g.is_income : !g.is_income)) ?? [];
+
   // Get line items for category picker based on transaction type
   const lineItems = budget?.category_groups
     ?.filter((g) => (type === 'income' ? g.is_income : !g.is_income))
@@ -99,6 +136,28 @@ export default function AddTransactionScreen() {
         groupName: g.name,
       }))
     ) ?? [];
+
+  // Get selected item details
+  const selectedItem = lineItems.find((item) => item.id === selectedLineItemId);
+
+  // Toggle group expansion
+  const toggleGroup = (groupId: string) => {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(groupId)) {
+        next.delete(groupId);
+      } else {
+        next.add(groupId);
+      }
+      return next;
+    });
+  };
+
+  // Handle category selection
+  const handleSelectCategory = (itemId: string) => {
+    setSelectedLineItemId(itemId);
+    setShowCategoryPicker(false);
+  };
 
   const handleAddNewSource = () => {
     if (!newSourceName.trim()) {
@@ -261,59 +320,132 @@ export default function AddTransactionScreen() {
           </Pressable>
         </Modal>
 
-        {/* Category Picker */}
+        {/* Category Picker Field */}
         <View style={styles.inputGroup}>
           <Text style={styles.label}>
             {type === 'income' ? 'Income Source (Required)' : 'Category'}
           </Text>
-          {lineItems.length > 0 ? (
-            <View style={styles.categoryList}>
-              {lineItems.map((item) => (
-                <Pressable
-                  key={item.id}
-                  onPress={() =>
-                    setSelectedLineItemId(
-                      selectedLineItemId === item.id ? null : item.id
-                    )
-                  }
-                  style={[
-                    styles.categoryItem,
-                    selectedLineItemId === item.id && styles.categoryItemActive,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.categoryName,
-                      selectedLineItemId === item.id && styles.categoryNameActive,
-                    ]}
-                  >
-                    {item.name}
-                  </Text>
-                  <Text style={styles.categoryGroup}>{item.groupName}</Text>
-                </Pressable>
-              ))}
-              {type === 'income' && (
-                <Pressable
-                  onPress={() => setShowNewSourceModal(true)}
-                  style={styles.addNewSourceButton}
-                >
-                  <Plus color="#4F46E5" size={18} />
-                  <Text style={styles.addNewSourceText}>Add New Income Source</Text>
-                </Pressable>
-              )}
-            </View>
-          ) : type === 'income' ? (
-            <View style={styles.categoryList}>
+          <Pressable
+            onPress={() => setShowCategoryPicker(true)}
+            style={[
+              styles.categoryPickerButton,
+              selectedItem && styles.categoryPickerButtonSelected,
+            ]}
+          >
+            {selectedItem ? (
+              <View style={styles.selectedCategoryContent}>
+                <View style={styles.selectedCategoryIcon}>
+                  {getCategoryIcon(selectedItem.groupName, '#4F46E5', 18)}
+                </View>
+                <View style={styles.selectedCategoryText}>
+                  <Text style={styles.selectedCategoryName}>{selectedItem.name}</Text>
+                  <Text style={styles.selectedCategoryGroup}>{selectedItem.groupName}</Text>
+                </View>
+                <ChevronRight color="#9CA3AF" size={20} />
+              </View>
+            ) : (
+              <View style={styles.categoryPickerPlaceholder}>
+                <Tag color="#9CA3AF" size={20} />
+                <Text style={styles.categoryPickerPlaceholderText}>
+                  {type === 'income' ? 'Select income source' : 'Select a category'}
+                </Text>
+                <ChevronRight color="#9CA3AF" size={20} />
+              </View>
+            )}
+          </Pressable>
+        </View>
+
+        {/* Category Picker Modal */}
+        <Modal
+          visible={showCategoryPicker}
+          animationType="slide"
+          presentationStyle="pageSheet"
+          onRequestClose={() => setShowCategoryPicker(false)}
+        >
+          <View style={styles.categoryModalContainer}>
+            {/* Modal Header */}
+            <View style={styles.categoryModalHeader}>
+              <Text style={styles.categoryModalTitle}>
+                {type === 'income' ? 'Select Income Source' : 'Select Category'}
+              </Text>
               <Pressable
-                onPress={() => setShowNewSourceModal(true)}
-                style={styles.addNewSourceButton}
+                onPress={() => setShowCategoryPicker(false)}
+                style={styles.categoryModalClose}
               >
-                <Plus color="#4F46E5" size={18} />
-                <Text style={styles.addNewSourceText}>Add New Income Source</Text>
+                <X color="#6B7280" size={24} />
               </Pressable>
             </View>
-          ) : null}
-        </View>
+
+            {/* Category Groups */}
+            <ScrollView style={styles.categoryModalScroll} showsVerticalScrollIndicator={false}>
+              {categoryGroups.map((group) => (
+                <View key={group.id} style={styles.categoryGroupContainer}>
+                  {/* Group Header */}
+                  <Pressable
+                    onPress={() => toggleGroup(group.id)}
+                    style={styles.categoryGroupHeader}
+                  >
+                    <View style={styles.categoryGroupIconContainer}>
+                      {getCategoryIcon(group.name, '#4F46E5', 22)}
+                    </View>
+                    <Text style={styles.categoryGroupName}>{group.name}</Text>
+                    <View style={styles.categoryGroupChevron}>
+                      {expandedGroups.has(group.id) ? (
+                        <ChevronDown color="#9CA3AF" size={20} />
+                      ) : (
+                        <ChevronRight color="#9CA3AF" size={20} />
+                      )}
+                    </View>
+                  </Pressable>
+
+                  {/* Group Items */}
+                  {expandedGroups.has(group.id) && (
+                    <View style={styles.categoryGroupItems}>
+                      {(group.line_items || []).map((item: any) => (
+                        <Pressable
+                          key={item.id}
+                          onPress={() => handleSelectCategory(item.id)}
+                          style={[
+                            styles.categoryGroupItem,
+                            selectedLineItemId === item.id && styles.categoryGroupItemSelected,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.categoryGroupItemText,
+                              selectedLineItemId === item.id && styles.categoryGroupItemTextSelected,
+                            ]}
+                          >
+                            {item.name}
+                          </Text>
+                          {selectedLineItemId === item.id && (
+                            <Check color="#4F46E5" size={18} />
+                          )}
+                        </Pressable>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              ))}
+
+              {/* Add New Income Source */}
+              {type === 'income' && (
+                <Pressable
+                  onPress={() => {
+                    setShowCategoryPicker(false);
+                    setShowNewSourceModal(true);
+                  }}
+                  style={styles.addNewSourceButtonModal}
+                >
+                  <Plus color="#4F46E5" size={20} />
+                  <Text style={styles.addNewSourceTextModal}>Add New Income Source</Text>
+                </Pressable>
+              )}
+
+              <View style={{ height: 40 }} />
+            </ScrollView>
+          </View>
+        </Modal>
 
         {/* New Income Source Modal */}
         <Modal
@@ -551,16 +683,158 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  addNewSourceButton: {
+  // Premium Category Picker Styles
+  categoryPickerButton: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 14,
+  },
+  categoryPickerButtonSelected: {
+    borderColor: '#4F46E5',
+    backgroundColor: '#FAFAFE',
+  },
+  categoryPickerPlaceholder: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  categoryPickerPlaceholderText: {
+    flex: 1,
+    fontSize: 16,
+    color: '#9CA3AF',
+    marginLeft: 12,
+  },
+  selectedCategoryContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  selectedCategoryIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#EEF2FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  selectedCategoryText: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  selectedCategoryName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  selectedCategoryGroup: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  categoryModalContainer: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+  },
+  categoryModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  categoryModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  categoryModalClose: {
+    padding: 4,
+  },
+  categoryModalScroll: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  categoryGroupContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    marginBottom: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  categoryGroupHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 14,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
   },
-  addNewSourceText: {
-    fontSize: 14,
+  categoryGroupIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#EEF2FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  categoryGroupName: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+    marginLeft: 12,
+  },
+  categoryGroupChevron: {
+    padding: 4,
+  },
+  categoryGroupItems: {
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+  },
+  categoryGroupItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingLeft: 68,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F9FAFB',
+  },
+  categoryGroupItemSelected: {
+    backgroundColor: '#EEF2FF',
+  },
+  categoryGroupItemText: {
+    fontSize: 15,
+    color: '#374151',
+  },
+  categoryGroupItemTextSelected: {
+    fontWeight: '600',
+    color: '#4F46E5',
+  },
+  addNewSourceButtonModal: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingVertical: 16,
+    marginTop: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  addNewSourceTextModal: {
+    fontSize: 16,
     fontWeight: '600',
     color: '#4F46E5',
     marginLeft: 8,
